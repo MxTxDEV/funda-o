@@ -28,7 +28,8 @@ O BullMQ precisa de **Redis TCP** (`redis://` ou `rediss://`) com `maxmemory-pol
 
 - Opções: Redis Cloud, Railway Redis, Upstash (endpoint TCP `rediss://`; prefira um plano fixo, pois
   o BullMQ faz polling contínuo e planos por comando ficam caros).
-- URLs REST da Upstash **não** funcionam com BullMQ.
+- URLs REST da Upstash **não** funcionam com BullMQ. A integração "Upstash for Redis" da Vercel injeta
+  `KV_URL` (`rediss://`), que o app aceita no lugar de `REDIS_URL`.
 
 ## 3. Migrations
 
@@ -38,8 +39,9 @@ Rode antes de cada deploy que altere o schema:
 DATABASE_URL_UNPOOLED=postgres://...direta... pnpm db:migrate
 ```
 
-Alternativa automática: na Vercel defina `RUN_MIGRATIONS_ON_BUILD=true` e `DATABASE_URL_UNPOOLED`
-**somente no ambiente Production**. O `scripts/vercel-build.sh` aplica migrations apenas quando
+Alternativa automática: na Vercel defina `RUN_MIGRATIONS_ON_BUILD=true` (e `ADMIN_EMAIL` /
+`ADMIN_PASSWORD` para criar a conta proprietária caso ainda não exista) **somente no ambiente
+Production**. O `scripts/vercel-build.sh` aplica migrations apenas quando
 `VERCEL_ENV=production` — deploys de preview nunca alteram o banco de produção.
 
 Depois crie a conta proprietária (uma vez):

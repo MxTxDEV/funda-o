@@ -6,8 +6,13 @@ export type RedisRole = "queue" | "worker" | "general";
  * Creates an ioredis connection. Workers require `maxRetriesPerRequest: null`
  * (blocking commands); producers and general clients fail fast instead.
  */
-export function createRedis(role: RedisRole = "general", url = process.env.REDIS_URL): Redis {
-  if (!url) throw new Error("REDIS_URL is not configured");
+/** REDIS_URL, or KV_URL as injected by the Upstash for Redis integration on Vercel. */
+export function redisUrlFromEnv(): string | undefined {
+  return process.env.REDIS_URL || process.env.KV_URL || undefined;
+}
+
+export function createRedis(role: RedisRole = "general", url = redisUrlFromEnv()): Redis {
+  if (!url) throw new Error("REDIS_URL (or KV_URL) is not configured");
   const options: RedisOptions = {
     maxRetriesPerRequest: role === "worker" ? null : 2,
     enableReadyCheck: role !== "queue",
