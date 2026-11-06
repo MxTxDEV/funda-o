@@ -1,12 +1,22 @@
 import { ProviderError } from "../errors";
 import { requestJson, trimBaseUrl } from "../http";
-import type { ChatRequest, ChatResult, FetchLike, ModelInfo, ModelProvider } from "../types";
+import type { ChatBlock, ChatMessage, ChatRequest, ChatResult, FetchLike, ModelInfo, ModelProvider } from "../types";
 
 const API_VERSION = "2023-06-01";
 
+function toAnthropicBlock(b: ChatBlock) {
+  if (b.type === "text") return { type: "text", text: b.text };
+  if (b.type === "tool_call") return { type: "tool_use", id: b.id, name: b.name, input: b.input };
+  return { type: "tool_result", tool_use_id: b.toolCallId, content: b.content, ...(b.isError ? { is_error: true } : {}) };
+}
+
+export function toAnthropicMessages(messages: ChatMessage[]) {
+  return messages.map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content : m.content.map(toAnthropicBlock) }));
+}
+
 type MessagesResponse = {
   model?: string;
-  content?: { type: string; text?: string }[];
+  content?: { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }[];
   stop_reason?: string | null;
   usage?: { input_tokens?: number; output_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number };
 };
@@ -66,8 +76,9 @@ export class AnthropicProvider implements ModelProvider {
           model: req.model,
           max_tokens: req.maxOutputTokens,
           system: req.system,
-          messages: req.messages,
+          messages: toAnthropicMessages(req.messages),
           ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+          ...(req.tools?.length ? { tools: req.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })) } : {}),
         },
         signal: req.signal,
         timeoutMs: req.timeoutMs,
@@ -88,10 +99,14 @@ export class AnthropicProvider implements ModelProvider {
             outputTokens: u.output_tokens,
           }
         : null;
+    const toolCalls = data.content
+      .filter((c) => c.type === "tool_use" && typeof c.id === "string" && typeof c.name === "string")
+      .map((c) => ({ id: c.id!, name: c.name!, input: c.input && typeof c.input === "object" ? c.input : {} }));
     const stop = data.stop_reason ?? "unknown";
     return {
       text,
-      finishReason: stop === "end_turn" || stop === "stop_sequence" ? "end" : stop,
+      toolCalls,
+      finishReason: stop === "end_turn" || stop === "stop_sequence" ? "end" : stop === "tool_use" ? "tool_calls" : stop,
       usage,
       model: data.model ?? req.model,
       requestId,

@@ -1,6 +1,16 @@
 import type { AiProviderId } from "./catalog";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatBlock =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
+  | { type: "tool_result"; toolCallId: string; content: string; isError?: boolean };
+
+export type ChatMessage = { role: "user" | "assistant"; content: string | ChatBlock[] };
+
+/** A function the model may call. `name` must match ^[a-zA-Z0-9_-]{1,64}$ (both providers). */
+export type ToolSpec = { name: string; description: string; inputSchema: Record<string, unknown> };
+
+export type ToolCall = { id: string; name: string; input: Record<string, unknown> };
 
 export type ChatRequest = {
   model: string;
@@ -8,6 +18,8 @@ export type ChatRequest = {
   messages: ChatMessage[];
   maxOutputTokens: number;
   temperature?: number;
+  /** Tools offered to the model in this call (omit for plain text generation). */
+  tools?: ToolSpec[];
   /** Aborts the HTTP request (task cancelled). */
   signal?: AbortSignal;
   /** Hard timeout for the request in ms. */
@@ -18,8 +30,10 @@ export type TokenUsage = { inputTokens: number; outputTokens: number };
 
 export type ChatResult = {
   text: string;
-  /** Normalized stop reason: "end" | "max_tokens" | other provider value. */
+  /** Normalized stop reason: "end" | "max_tokens" | "tool_calls" | other provider value. */
   finishReason: string;
+  /** Tool calls requested by the model (empty when none). */
+  toolCalls: ToolCall[];
   /** Null when the provider did not report usage. */
   usage: TokenUsage | null;
   /** Model identifier reported by the provider. */

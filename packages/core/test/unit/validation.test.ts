@@ -6,11 +6,13 @@ import { agentCreateSchema, conversationCreateSchema, taskCreateSchema } from ".
 const uuid = "4f0f8d2e-8a4c-4c1e-9a55-0d2b6f7d9c11";
 
 describe("tool catalog", () => {
-  it("never allows spending or publishing in the FOUNDATION phase", () => {
+  it("keeps every external action at level 4 and not executable in this phase", () => {
     for (const tool of TOOL_CATALOG) {
-      expect(tool.allowsSpend).toBe(false);
-      expect(tool.readOnly).toBe(true);
-      expect(tool.id).not.toMatch(/publish|spend|budget/);
+      if (tool.sideEffects === "external_write") {
+        expect(tool.riskLevel).toBe(4);
+        expect(tool.status).toBe("planned");
+      }
+      expect(tool.id).not.toMatch(/publish|spend|pay/);
     }
   });
 });

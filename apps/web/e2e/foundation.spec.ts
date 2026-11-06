@@ -40,7 +40,7 @@ test("full foundation flow: department → agent → task → worker → approva
   await page.getByLabel("Cargo").fill("Copywriter");
   await page.getByLabel("Especialidade", { exact: true }).fill("Copy de resposta direta");
   await page.getByLabel("Instruções").fill("Escreva textos claros e persuasivos para anúncios.");
-  await page.getByText("Copywriting", { exact: true }).click();
+  await page.getByText("Calcular métricas de marketing", { exact: true }).click();
   await page.getByRole("button", { name: "Cadastrar funcionário" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(`Agente ${suffix}`);
   await expect(page.getByText("Versão ativa v1")).toBeVisible();

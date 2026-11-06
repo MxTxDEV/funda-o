@@ -30,3 +30,4 @@ export * from "./hash";
 export * from "./services/ai";
 export * from "./services/agent-runs";
 export * from "./services/agent-registry";
+export * from "./services/tools";

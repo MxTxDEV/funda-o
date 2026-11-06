@@ -128,12 +128,14 @@ export type AgentRunRow = Awaited<ReturnType<typeof listAgentRuns>>[number];
 /** Command Center: today's AI activity and the latest executions. */
 export async function getAiActivity(ctx: ServiceContext) {
   assertCan(ctx.actor, "dashboard:read");
-  const [today, recent, running] = await Promise.all([
+  const { topTools } = await import("./tools");
+  const [today, recent, running, tools] = await Promise.all([
     usageToday(ctx.db),
     listAgentRuns(ctx, { limit: 8 }),
     ctx.db.select({ value: sql<number>`count(*)::int` }).from(agentRuns).where(eq(agentRuns.status, "running")),
+    topTools(ctx.db, 5),
   ]);
-  return { today, recent, running: running[0]?.value ?? 0 };
+  return { today, recent, running: running[0]?.value ?? 0, topTools: tools };
 }
 
 /** Running model executions by employee (the 3D office shows who is really executing). */

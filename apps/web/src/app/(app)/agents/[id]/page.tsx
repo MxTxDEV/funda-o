@@ -1,6 +1,11 @@
 import {
   AI_CONNECTION_LABELS,
+  AUTONOMY_LABELS,
+  AUTONOMY_LEVELS,
   aiConnectionOf,
+  listToolExecutions,
+  TOOL_AVAILABILITY_LABELS,
+  toolAccessFor,
   can,
   getAiFormOptions,
   getProviderAvailability,
@@ -21,6 +26,8 @@ import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
 import { AiSettingsFields } from "@/components/ai-settings-fields";
 import { AgentRunsTable } from "@/components/agent-runs-table";
+import { ToolExecutionsTable } from "@/components/tool-executions-table";
+import { setAgentAutonomyAction } from "../../actions/tools";
 import { ActionForm, Field, SubmitButton } from "@/components/forms";
 import { PageHeader } from "@/components/page-header";
 import { AgentStatusBadge, DemoBadge, PresenceBadge, TaskStatusBadge } from "@/components/status";
@@ -52,6 +59,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     listAgentRuns(ctx, { agentId: agent.id, limit: 10 }),
     usageToday(ctx.db, { agentId: agent.id }),
   ]);
+  const toolExecutions = await listToolExecutions(ctx, { agentId: agent.id, limit: 10 });
+  const toolAccess = toolAccessFor(agent.currentVersion?.allowedTools ?? [], agent.autonomyLevel);
   const managers = colleagues.filter((c) => c.id !== agent.id && c.hierarchyLevel !== "specialist");
   const ai = aiConnectionOf(agent.currentVersion?.aiProvider, agent.currentVersion?.aiModel, availability);
   const current = agent.currentVersion;
@@ -239,6 +248,47 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
               </CardContent>
             </Card>
           )}
+
+          <Card data-testid="autonomy-card">
+            <CardHeader>
+              <div>
+                <CardTitle>Autonomia e ferramentas</CardTitle>
+                <CardDescription>{AUTONOMY_LABELS[agent.autonomyLevel as 1 | 2 | 3 | 4]?.name}: {AUTONOMY_LABELS[agent.autonomyLevel as 1 | 2 | 3 | 4]?.description}</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canWrite && (
+                <ActionForm action={setAgentAutonomyAction} className="flex flex-wrap items-end gap-2" resetOnSuccess={false}>
+                  <input type="hidden" name="id" value={agent.id} />
+                  <Field label="Nível de autonomia" name="autonomyLevel" className="min-w-64 flex-1">
+                    <Select id="autonomyLevel" name="autonomyLevel" defaultValue={String(agent.autonomyLevel)}>
+                      {AUTONOMY_LEVELS.map((l) => (
+                        <option key={l} value={l}>
+                          {AUTONOMY_LABELS[l].name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <SubmitButton size="sm" variant="outline">
+                    Salvar nível
+                  </SubmitButton>
+                </ActionForm>
+              )}
+              {toolAccess.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma ferramenta autorizada na versão ativa.</p>
+              ) : (
+                <ul className="grid gap-1.5 text-xs sm:grid-cols-2">
+                  {toolAccess.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5">
+                      <span>{t.label}</span>
+                      <Badge tone={t.reason === "ok" ? "green" : "neutral"}>{TOOL_AVAILABILITY_LABELS[t.reason]}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <ToolExecutionsTable rows={toolExecutions} empty="Nenhuma ferramenta usada ainda." />
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

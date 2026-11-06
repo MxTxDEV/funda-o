@@ -40,7 +40,7 @@ describe("AnthropicProvider", () => {
     );
     const p = new AnthropicProvider("sk-ant-secret-value", f.impl);
     const r = await p.chat({ ...req, temperature: 0.2 });
-    expect(r).toEqual({ text: "Resposta final", finishReason: "end", usage: { inputTokens: 12, outputTokens: 5 }, model: "model-x", requestId: "req_1" });
+    expect(r).toEqual({ text: "Resposta final", toolCalls: [], finishReason: "end", usage: { inputTokens: 12, outputTokens: 5 }, model: "model-x", requestId: "req_1" });
     const call = f.calls[0]!;
     expect(call.url).toBe("https://api.anthropic.com/v1/messages");
     expect((call.init.headers as Record<string, string>)["x-api-key"]).toBe("sk-ant-secret-value");
@@ -128,7 +128,7 @@ describe("OpenAIProvider", () => {
       { "x-request-id": "r-9" },
     );
     const r = await new OpenAIProvider("sk-test-1234567890", f.impl, "http://mock.local/").chat(req);
-    expect(r).toEqual({ text: "Oi", finishReason: "max_tokens", usage: { inputTokens: 7, outputTokens: 3 }, model: "model-y", requestId: "r-9" });
+    expect(r).toEqual({ text: "Oi", toolCalls: [], finishReason: "max_tokens", usage: { inputTokens: 7, outputTokens: 3 }, model: "model-y", requestId: "r-9" });
     expect(f.calls[0]!.url).toBe("http://mock.local/v1/chat/completions");
     expect((f.calls[0]!.init.headers as Record<string, string>).authorization).toBe("Bearer sk-test-1234567890");
     const body = JSON.parse(String(f.calls[0]!.init.body));
@@ -139,6 +139,48 @@ describe("OpenAIProvider", () => {
   it("hides non-chat model families from the model list", async () => {
     const f = fakeFetch(200, { data: [{ id: "chat-a", created: 2 }, { id: "text-embedding-x", created: 3 }, { id: "tts-1", created: 1 }] });
     expect((await new OpenAIProvider("k", f.impl).listModels()).map((m) => m.id)).toEqual(["chat-a"]);
+  });
+});
+
+describe("tool calling", () => {
+  const tools = [{ name: "web__fetch_page", description: "Lê página", inputSchema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] } }];
+  const history = [
+    { role: "user" as const, content: "Pesquise" },
+    { role: "assistant" as const, content: [{ type: "text" as const, text: "Vou ler." }, { type: "tool_call" as const, id: "call_1", name: "web__fetch_page", input: { url: "https://a.com" } }] },
+    { role: "user" as const, content: [{ type: "tool_result" as const, toolCallId: "call_1", content: "texto", isError: false }] },
+  ];
+
+  it("Anthropic: sends tools and tool_use/tool_result blocks and parses tool calls", async () => {
+    const f = fakeFetch(200, {
+      content: [{ type: "text", text: "Lendo" }, { type: "tool_use", id: "toolu_2", name: "web__fetch_page", input: { url: "https://b.com" } }],
+      stop_reason: "tool_use",
+      usage: { input_tokens: 5, output_tokens: 6 },
+    });
+    const r = await new AnthropicProvider("k", f.impl).chat({ ...req, messages: history, tools });
+    const body = JSON.parse(String(f.calls[0]!.init.body));
+    expect(body.tools[0]).toEqual({ name: "web__fetch_page", description: "Lê página", input_schema: tools[0]!.inputSchema });
+    expect(body.messages[1].content[1]).toEqual({ type: "tool_use", id: "call_1", name: "web__fetch_page", input: { url: "https://a.com" } });
+    expect(body.messages[2].content[0]).toEqual({ type: "tool_result", tool_use_id: "call_1", content: "texto" });
+    expect(r.finishReason).toBe("tool_calls");
+    expect(r.toolCalls).toEqual([{ id: "toolu_2", name: "web__fetch_page", input: { url: "https://b.com" } }]);
+  });
+
+  it("OpenAI: sends function tools, assistant tool_calls and tool messages, and parses calls", async () => {
+    const f = fakeFetch(200, {
+      choices: [{ message: { content: null, tool_calls: [{ id: "c2", type: "function", function: { name: "web__fetch_page", arguments: '{"url":"https://b.com"}' } }] }, finish_reason: "tool_calls" }],
+      usage: { prompt_tokens: 1, completion_tokens: 1 },
+    });
+    const r = await new OpenAIProvider("k", f.impl).chat({ ...req, messages: history, tools });
+    const body = JSON.parse(String(f.calls[0]!.init.body));
+    expect(body.tools[0]).toEqual({ type: "function", function: { name: "web__fetch_page", description: "Lê página", parameters: tools[0]!.inputSchema } });
+    expect(body.messages[2]).toEqual({
+      role: "assistant",
+      content: "Vou ler.",
+      tool_calls: [{ id: "call_1", type: "function", function: { name: "web__fetch_page", arguments: '{"url":"https://a.com"}' } }],
+    });
+    expect(body.messages[3]).toEqual({ role: "tool", tool_call_id: "call_1", content: "texto" });
+    expect(r.finishReason).toBe("tool_calls");
+    expect(r.toolCalls).toEqual([{ id: "c2", name: "web__fetch_page", input: { url: "https://b.com" } }]);
   });
 });
 

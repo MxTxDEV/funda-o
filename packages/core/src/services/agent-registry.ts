@@ -7,7 +7,8 @@ import { readAgentAiConfig, type AgentAiConfig } from "@vc/ai/catalog";
 import { agents, agentVersions, type DbExecutor, departments } from "@vc/db";
 import { eq } from "drizzle-orm";
 import { HIERARCHY_LABELS } from "../agent-authority";
-import { getTool } from "../tools";
+import { getTool, type ToolAvailabilityReason } from "../tools";
+import { toolAccessFor } from "./tools";
 
 export type AgentIdentity = {
   agentId: string;
@@ -21,6 +22,10 @@ export type AgentIdentity = {
   responsibilities: string[];
   personality: string;
   managerName: string | null;
+  /** Current autonomy level (owner setting, read at execution time). */
+  autonomyLevel: number;
+  /** Concrete tools granted by the version, with the current authorization decision. */
+  toolAccess: { id: string; label: string; riskLevel: number; reason: ToolAvailabilityReason }[];
   version: {
     id: string;
     number: number;
@@ -58,6 +63,8 @@ export async function loadAgentIdentity(db: DbExecutor, agentId: string, version
     responsibilities: row.agent.responsibilities,
     personality: row.agent.personality,
     managerName: manager,
+    autonomyLevel: row.agent.autonomyLevel,
+    toolAccess: toolAccessFor(version.allowedTools, row.agent.autonomyLevel),
     version: {
       id: version.id,
       number: version.version,

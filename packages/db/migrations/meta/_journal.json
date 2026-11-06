@@ -50,6 +50,13 @@
       "when": 1793962851082,
       "tag": "0006_ai_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793970807425,
+      "tag": "0007_tool_registry",
+      "breakpoints": true
     }
   ]
 }

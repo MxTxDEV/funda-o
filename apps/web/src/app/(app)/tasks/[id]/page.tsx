@@ -1,4 +1,5 @@
-import { ACTIVE_STATUSES, CANCELLABLE_STATUSES, can, getTask, listAgentRuns, listAgents, TASK_EVENT_LABELS, TASK_TYPES } from "@vc/core";
+import { ACTIVE_STATUSES, CANCELLABLE_STATUSES, can, getTask, listAgentRuns, listAgents, listTaskSources, listToolExecutions, TASK_EVENT_LABELS, TASK_TYPES } from "@vc/core";
+import { ToolExecutionsTable } from "@/components/tool-executions-table";
 import { Ban, Play, RotateCcw, UserRoundCog } from "lucide-react";
 import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
@@ -47,7 +48,9 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const agents = canAssign ? await listAgents(ctx, { status: "active" }) : [];
   const typeDef = TASK_TYPES[task.type as keyof typeof TASK_TYPES];
   const isAi = task.type === "agent.execute";
-  const runs = isAi ? await listAgentRuns(ctx, { taskId: task.id, limit: 50 }) : [];
+  const [runs, toolRows, sources] = isAi
+    ? await Promise.all([listAgentRuns(ctx, { taskId: task.id, limit: 50 }), listToolExecutions(ctx, { taskId: task.id, limit: 100 }), listTaskSources(ctx, task.id)])
+    : [[], [], []];
   const aiResult = isAi && task.result?.kind === "agent_output" ? (task.result as AgentOutput) : null;
 
   return (
@@ -138,6 +141,40 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
               </CardHeader>
               <CardContent className="p-0">
                 <AgentRunsTable runs={runs} showTask={false} empty="O modelo ainda não foi chamado para esta tarefa." />
+              </CardContent>
+            </Card>
+          )}
+
+          {isAi && toolRows.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ferramentas utilizadas</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ToolExecutionsTable rows={toolRows} showTask={false} empty="" />
+              </CardContent>
+            </Card>
+          )}
+
+          {isAi && sources.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fontes e referências ({sources.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm" data-testid="task-sources">
+                  {sources.map((s) => (
+                    <li key={s.id}>
+                      <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[#9dbbff] hover:underline">
+                        {s.title || s.url}
+                      </a>
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        {s.kind === "web_page" ? "página lida" : "resultado de busca"} · {formatDateTime(s.retrievedAt)}
+                      </span>
+                      <div className="truncate text-xs text-muted-foreground">{s.url}</div>
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}

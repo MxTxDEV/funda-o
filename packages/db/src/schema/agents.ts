@@ -39,6 +39,8 @@ export const agents = pgTable(
     personality: text("personality").notNull().default(""),
     /** Organizational level: coo (coordinates the operation), director (leads a department), specialist. */
     hierarchyLevel: text("hierarchy_level").$type<AgentHierarchyLevel>().notNull().default("specialist"),
+    /** Autonomy level set by the owner: 1 consult, 2 produce, 3 prepare external actions, 4 execute approved actions. */
+    autonomyLevel: integer("autonomy_level").notNull().default(2),
     reportsToAgentId: uuid("reports_to_agent_id").references((): AnyPgColumn => agents.id, { onDelete: "set null" }),
     /** Visual configuration of the 3D/2D character (body, hair, outfit...). Empty = derived from avatarSeed. */
     appearance: jsonb("appearance").$type<AgentAppearance>().notNull().default({}),
@@ -58,6 +60,7 @@ export const agents = pgTable(
     index("agents_reports_to_idx").on(t.reportsToAgentId),
     uniqueIndex("agents_seed_key_uq").on(t.seedKey),
     check("agents_hierarchy_level_ck", sql`${t.hierarchyLevel} IN ('coo', 'director', 'specialist')`),
+    check("agents_autonomy_level_ck", sql`${t.autonomyLevel} BETWEEN 1 AND 4`),
   ],
 );
 

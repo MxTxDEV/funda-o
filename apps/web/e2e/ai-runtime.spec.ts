@@ -69,3 +69,40 @@ test("AI task executed by an employee with a configured model", async ({ page, r
   const ai = (await (await request.get("/api/v1/ai")).json()).data;
   expect(JSON.stringify(ai)).not.toContain("sk-ant-e2e-mock-key");
 });
+
+test("employee uses an authorized tool through the gateway", async ({ page }) => {
+  const suffix = Date.now().toString(36);
+  await page.goto("/departments");
+  await page.getByLabel("Nome").fill(`Dados ${suffix}`);
+  await page.getByRole("button", { name: /Criar departamento/ }).click();
+  await expect(page.getByText(`Dados ${suffix}`).first()).toBeVisible();
+
+  await page.goto("/agents/new");
+  await page.getByLabel("Departamento").selectOption({ label: `Dados ${suffix}` });
+  await page.getByLabel("Nome").fill(`Beatriz ${suffix}`);
+  await page.getByLabel("Cargo").fill("Analista");
+  await page.getByLabel("Especialidade", { exact: true }).fill("Métricas");
+  await page.getByLabel("Instruções").fill("Calcule e interprete métricas usando somente dados verificáveis.");
+  await page.getByText("Calcular métricas de marketing", { exact: true }).click();
+  await page.getByLabel("Provedor de IA").selectOption("anthropic");
+  await page.getByLabel("Modelo").fill("mock-model-1");
+  await page.getByRole("button", { name: "Cadastrar funcionário" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(`Beatriz ${suffix}`);
+  await expect(page.getByTestId("autonomy-card")).toContainText("Disponível");
+
+  await page.goto("/tasks/new");
+  await page.getByLabel("Título").fill(`Métricas ${suffix}`);
+  await page.getByLabel("Responsável", { exact: true }).selectOption({ label: `Beatriz ${suffix} · Analista` });
+  await page.getByRole("button", { name: "Criar tarefa" }).click();
+
+  await expect(page.getByTestId("ai-output")).toContainText("Resultado com ferramenta", { timeout: 60_000 });
+  await expect(page.getByTestId("ai-output")).toContainText("ROAS 3");
+  await expect(page.getByRole("heading", { name: "Ferramentas utilizadas" })).toBeVisible();
+  await expect(page.getByText("Métricas calculadas para 1 linha(s)")).toBeVisible();
+  // tokens summed across both model calls
+  await expect(page.getByText("500 → 100").first()).toBeVisible();
+
+  await page.goto("/tools");
+  await expect(page.getByTestId("tool-analytics.compute_metrics")).toContainText(`Beatriz ${suffix}`);
+  await expect(page.getByTestId("tool-web.search")).toContainText("Requer configuração");
+});

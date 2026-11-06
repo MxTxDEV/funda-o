@@ -1,4 +1,4 @@
-import { getAiActivity, getDashboard, PRESENCE_LABELS, PRESENCE_STATES, TASK_EVENT_LABELS, TASK_STATUS_LABELS, TASK_STATUSES } from "@vc/core";
+import { getAiActivity, getDashboard, getTool, PRESENCE_LABELS, PRESENCE_STATES, TASK_EVENT_LABELS, TASK_STATUS_LABELS, TASK_STATUSES } from "@vc/core";
 import {
   Activity,
   ArrowRight,
@@ -169,6 +169,21 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-lg font-semibold tabular-nums">{ai.today.costUsd > 0 ? `US$ ${ai.today.costUsd.toFixed(4)}` : "—"}</p>
                     <p className="text-muted-foreground">{ai.today.unpricedRuns > 0 ? `Custo est. (${ai.today.unpricedRuns} sem preço)` : "Custo estimado"}</p>
+                  </div>
+                  <div className="col-span-2 border-t border-border pt-2 text-left">
+                    <p className="mb-1 text-muted-foreground">Ferramentas mais usadas</p>
+                    {ai.topTools.length === 0 ? (
+                      <p className="text-muted-foreground">Nenhuma ferramenta usada ainda.</p>
+                    ) : (
+                      <ul className="space-y-0.5">
+                        {ai.topTools.map((t) => (
+                          <li key={t.toolId} className="flex justify-between">
+                            <span>{getTool(t.toolId)?.label ?? t.toolId}</span>
+                            <b className="tabular-nums">{t.n}</b>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </CardContent>
               </Card>

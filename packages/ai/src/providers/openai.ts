@@ -1,10 +1,13 @@
 import { ProviderError } from "../errors";
 import { requestJson, trimBaseUrl } from "../http";
-import type { ChatRequest, ChatResult, FetchLike, ModelInfo, ModelProvider } from "../types";
+import type { ChatMessage, ChatRequest, ChatResult, FetchLike, ModelInfo, ModelProvider } from "../types";
 
 type CompletionResponse = {
   model?: string;
-  choices?: { message?: { content?: string | null; refusal?: string | null }; finish_reason?: string | null }[];
+  choices?: {
+    message?: { content?: string | null; refusal?: string | null; tool_calls?: { id: string; type: string; function?: { name: string; arguments: string } }[] };
+    finish_reason?: string | null;
+  }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 type ModelsList = { data?: { id: string; created?: number }[] };
@@ -14,6 +17,32 @@ type ModelsList = { data?: { id: string; created?: number }[] };
  * They are hidden from the model picker; everything else is shown exactly as the provider lists it.
  */
 const NON_CHAT = /(embedding|tts|whisper|dall-e|moderation|transcribe|realtime|audio|image|sora|davinci|babbage|search)/i;
+
+export function toOpenAIMessages(messages: ChatMessage[]) {
+  const out: Record<string, unknown>[] = [];
+  for (const m of messages) {
+    if (typeof m.content === "string") {
+      out.push({ role: m.role, content: m.content });
+      continue;
+    }
+    if (m.role === "assistant") {
+      const text = m.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+      const calls = m.content.filter((b) => b.type === "tool_call");
+      out.push({
+        role: "assistant",
+        content: text || null,
+        ...(calls.length
+          ? { tool_calls: calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: JSON.stringify(c.input) } })) }
+          : {}),
+      });
+      continue;
+    }
+    const text = m.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+    for (const b of m.content) if (b.type === "tool_result") out.push({ role: "tool", tool_call_id: b.toolCallId, content: b.isError ? `ERRO: ${b.content}` : b.content });
+    if (text) out.push({ role: "user", content: text });
+  }
+  return out;
+}
 
 /** OpenAI Chat Completions API (https://platform.openai.com/docs/api-reference/chat). */
 export class OpenAIProvider implements ModelProvider {
@@ -61,7 +90,10 @@ export class OpenAIProvider implements ModelProvider {
         headers: this.headers(),
         body: {
           model: req.model,
-          messages: [{ role: "system", content: req.system }, ...req.messages],
+          messages: [{ role: "system", content: req.system }, ...toOpenAIMessages(req.messages)],
+          ...(req.tools?.length
+            ? { tools: req.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.inputSchema } })) }
+            : {}),
           max_completion_tokens: req.maxOutputTokens,
           ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
         },
@@ -80,10 +112,23 @@ export class OpenAIProvider implements ModelProvider {
       u && typeof u.prompt_tokens === "number" && typeof u.completion_tokens === "number"
         ? { inputTokens: u.prompt_tokens, outputTokens: u.completion_tokens }
         : null;
+    const toolCalls = (choice.message.tool_calls ?? [])
+      .filter((c) => c.type === "function" && c.function)
+      .map((c) => {
+        let input: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(c.function!.arguments || "{}");
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) input = parsed;
+        } catch {
+          input = { __invalid_json: c.function!.arguments.slice(0, 200) };
+        }
+        return { id: c.id, name: c.function!.name, input };
+      });
     const stop = choice.finish_reason ?? "unknown";
     return {
       text,
-      finishReason: stop === "stop" ? "end" : stop === "length" ? "max_tokens" : stop,
+      toolCalls,
+      finishReason: stop === "stop" ? "end" : stop === "length" ? "max_tokens" : stop === "tool_calls" ? "tool_calls" : stop,
       usage,
       model: data.model ?? req.model,
       requestId,

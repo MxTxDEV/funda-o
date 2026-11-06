@@ -4,6 +4,7 @@ import {
   Building2,
   CheckCheck,
   Cpu,
+  Wrench,
   LayoutDashboard,
   ListTodo,
   MessagesSquare,
@@ -23,6 +24,7 @@ const ITEMS = [
   { href: "/approvals", label: "Aprovações", icon: CheckCheck, badgeKey: "approvals" as const },
   { href: "/conversations", label: "Conversas", icon: MessagesSquare },
   { href: "/ai", label: "IA e execuções", icon: Cpu },
+  { href: "/tools", label: "Ferramentas", icon: Wrench },
   { href: "/audit", label: "Auditoria", icon: ScrollText, permission: "audit" as const },
 ];
 

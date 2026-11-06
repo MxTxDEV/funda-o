@@ -5,3 +5,6 @@ export * from "./reconciler";
 export * from "./drain";
 export * from "./runtime/agent-runtime";
 export * from "./runtime/prompt";
+export * from "./tools/gateway";
+export * from "./tools/registry";
+export * from "./tools/types";
