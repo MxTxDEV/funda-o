@@ -1,5 +1,6 @@
 "use client";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, KeyRound, LogOut } from "lucide-react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,11 @@ export function UserMenu({
       <DropdownMenuContent align="end" side="top" className="w-56">
         <DropdownMenuLabel>{email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/account">
+            <KeyRound /> Minha conta e senha
+          </Link>
+        </DropdownMenuItem>
         <form action={signOutAction}>
           <DropdownMenuItem asChild>
             <button type="submit" className="w-full">

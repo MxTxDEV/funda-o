@@ -36,7 +36,11 @@ export function VirtualOffice({ initial }: { initial: OfficeSnapshot }) {
   const selection = useOfficeStore((s) => s.selection);
   const select = useOfficeStore((s) => s.select);
 
-  useEffect(() => setWebgl(detectWebGL()), []);
+  const setQuality = useOfficeStore((s) => s.setQuality);
+  useEffect(() => {
+    setWebgl(detectWebGL());
+    if (new URLSearchParams(window.location.search).get("quality") === "low") setQuality("low");
+  }, [setQuality]);
   useEffect(() => () => select(null), [select]);
 
   const close = () => select(null);

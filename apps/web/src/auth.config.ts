@@ -14,9 +14,9 @@ export const authConfig = {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const loggedIn = !!auth?.user;
-      if (pathname === "/login") {
-        return loggedIn ? Response.redirect(new URL("/", request.nextUrl)) : true;
-      }
+      // The login page is always reachable: a cookie may hold a session that the backend no longer
+      // accepts (password changed, user deactivated). Redirecting it away would loop.
+      if (pathname === "/login") return true;
       // API handlers answer 401 JSON themselves.
       if (pathname.startsWith("/api/")) return true;
       return loggedIn;
@@ -25,11 +25,13 @@ export const authConfig = {
       if (user) {
         token.uid = user.id;
         token.role = (user as { role?: string }).role;
+        token.sv = (user as { sessionVersion?: number }).sessionVersion ?? 0;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user && typeof token.uid === "string") session.user.id = token.uid;
+      if (session.user) session.user.sv = typeof token.sv === "number" ? token.sv : 0;
       return session;
     },
   },

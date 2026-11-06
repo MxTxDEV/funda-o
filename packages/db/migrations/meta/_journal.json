@@ -36,6 +36,13 @@
       "when": 1793930596025,
       "tag": "0004_team_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793959760469,
+      "tag": "0005_session_version",
+      "breakpoints": true
     }
   ]
 }

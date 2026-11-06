@@ -14,12 +14,14 @@ export const getActor = cache(async (): Promise<(UserActor & { name: string }) |
   if (!userId) return null;
   const user = await getActiveUser(getDb(), userId);
   if (!user) return null;
+  // Sessions issued before the last password change are no longer valid.
+  if ((session.user?.sv ?? 0) !== user.sessionVersion) return null;
   return { type: "user", userId: user.id, email: user.email, role: user.role, name: user.name };
 });
 
 export async function requireActor() {
   const actor = await getActor();
-  if (!actor) redirect("/login");
+  if (!actor) redirect("/login?expired=1");
   return actor;
 }
 

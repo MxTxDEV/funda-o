@@ -14,6 +14,16 @@ import { OfficeScene } from "./OfficeScene";
  * animation. "low": no post-processing/shadows, lower pixel ratio. The tier drops automatically
  * when the frame rate is low (PerformanceMonitor) and can be toggled by the user.
  */
+function isSoftwareRenderer(ctx: WebGLRenderingContext | WebGL2RenderingContext) {
+  try {
+    const ext = ctx.getExtension("WEBGL_debug_renderer_info");
+    const renderer = String(ext ? ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ctx.getParameter(ctx.RENDERER));
+    return /swiftshader|llvmpipe|software|softpipe|basic render/i.test(renderer);
+  } catch {
+    return false;
+  }
+}
+
 export default function VirtualOfficeCanvas({ snapshot }: { snapshot: OfficeSnapshot }) {
   const [dpr, setDpr] = useState(1.5);
   const quality = useOfficeStore((s) => s.quality);
@@ -28,6 +38,10 @@ export default function VirtualOfficeCanvas({ snapshot }: { snapshot: OfficeSnap
       camera={{ position: INITIAL_POSITION.toArray(), fov: 34, near: 0.5, far: 260 }}
       gl={{ antialias: !high, powerPreference: "high-performance", toneMapping: high ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
       onPointerMissed={() => select(null)}
+      onCreated={({ gl }) => {
+        // Software renderers (no GPU) cannot sustain the high tier: start in economy mode.
+        if (isSoftwareRenderer(gl.getContext())) setQuality("low");
+      }}
       data-testid="office-canvas"
     >
       <PerformanceMonitor

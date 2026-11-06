@@ -13,7 +13,7 @@ test("virtual office: navigation, 3D canvas and indicators from the database", a
   await expect(page).toHaveURL(/\/agents\/new/);
   await page.getByLabel("Nome").fill(`Office ${suffix}`);
   await page.getByLabel("Cargo").fill("Gestor de Tráfego");
-  await page.getByLabel("Especialidade").fill("Meta Ads");
+  await page.getByLabel("Especialidade", { exact: true }).fill("Meta Ads");
   await page.getByLabel("Instruções").fill("Planeje campanhas sem publicar nada.");
   await page.getByRole("button", { name: "Cadastrar funcionário" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(`Office ${suffix}`);
@@ -60,7 +60,9 @@ test("virtual office: environments, Central Brain and department panels", async 
   await page.getByLabel("Ir para ambiente").selectOption({ label: "Sala de Lazer" });
   await expect(page.getByTestId("office-panel")).toContainText("Sala de Lazer");
 
-  await page.getByLabel("Ir para ambiente").selectOption({ label: "Diretoria" });
+  // The Diretoria is a department room (occupied or not); its panel links to pending approvals.
+  const diretoria = page.getByLabel("Ir para ambiente").locator("optgroup[label=Departamentos] option").filter({ hasText: "Diretoria" });
+  await page.getByLabel("Ir para ambiente").selectOption({ label: (await diretoria.first().textContent())!.trim() });
   await expect(page.getByTestId("office-panel").getByRole("link", { name: "Abrir aprovações pendentes" })).toBeVisible();
 
   // Any department room from the picker opens a department/room panel.

@@ -51,7 +51,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (result.reason === "locked") throw new Locked();
             return null;
           }
-          return { id: result.user.userId, email: result.user.email, name: result.user.name, role: result.user.role };
+          return {
+            id: result.user.userId,
+            email: result.user.email,
+            name: result.user.name,
+            role: result.user.role,
+            sessionVersion: result.user.sessionVersion,
+          };
         } catch (err) {
           if (err instanceof CredentialsSignin) throw err;
           logger.error("auth.authorize_failed", { err });

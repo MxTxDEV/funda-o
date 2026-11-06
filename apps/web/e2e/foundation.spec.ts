@@ -38,7 +38,7 @@ test("full foundation flow: department → agent → task → worker → approva
   await expect(page).toHaveURL(/\/agents\/new/);
   await page.getByLabel("Nome").fill(`Agente ${suffix}`);
   await page.getByLabel("Cargo").fill("Copywriter");
-  await page.getByLabel("Especialidade").fill("Copy de resposta direta");
+  await page.getByLabel("Especialidade", { exact: true }).fill("Copy de resposta direta");
   await page.getByLabel("Instruções").fill("Escreva textos claros e persuasivos para anúncios.");
   await page.getByText("Copywriting", { exact: true }).click();
   await page.getByRole("button", { name: "Cadastrar funcionário" }).click();

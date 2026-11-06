@@ -13,6 +13,8 @@ export const users = pgTable(
     role: userRoleEnum("role").notNull().default("viewer"),
     isActive: boolean("is_active").notNull().default(true),
     failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+    /** Incremented on password change: sessions issued with an older value are rejected. */
+    sessionVersion: integer("session_version").notNull().default(0),
     lockedUntil: tsz("locked_until"),
     lastLoginAt: tsz("last_login_at"),
     createdAt: createdAt(),
