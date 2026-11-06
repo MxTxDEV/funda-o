@@ -23,3 +23,6 @@ export * from "./services/audit-query";
 export * from "./services/users";
 export * from "./services/office";
 export * from "./office";
+export * from "./agent-authority";
+export * from "./team-roster";
+export * from "./services/team";

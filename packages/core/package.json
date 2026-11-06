@@ -13,7 +13,8 @@
     "db:seed:admin": "tsx src/seed/admin.ts",
     "db:seed:demo": "tsx src/seed/demo.ts",
     "db:demo:purge": "tsx src/seed/purge-demo.ts",
-    "db:bootstrap:admin": "tsx src/seed/bootstrap-admin.ts"
+    "db:bootstrap:admin": "tsx src/seed/bootstrap-admin.ts",
+    "db:seed:team": "tsx src/seed/team.ts"
   },
   "dependencies": {
     "@vc/db": "workspace:*",

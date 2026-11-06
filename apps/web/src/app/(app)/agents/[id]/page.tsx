@@ -1,4 +1,16 @@
-import { can, getAgent, getTool, listDepartments, TASK_STATUS_LABELS } from "@vc/core";
+import {
+  AI_CONNECTION_LABELS,
+  aiConnectionOf,
+  can,
+  getAgent,
+  getAgentWorkstation,
+  getDepartmentZone,
+  getTool,
+  HIERARCHY_LABELS,
+  listAgents,
+  listDepartments,
+  TASK_STATUS_LABELS,
+} from "@vc/core";
 import { Archive, History, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
@@ -24,7 +36,13 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   const ctx = await getServiceContext();
   const agent = await getAgent(ctx, id).catch(handlePageError);
   const canWrite = can(ctx.actor, "agents:write");
-  const departments = canWrite ? await listDepartments(ctx, { activeOnly: true }) : [];
+  const [departments, colleagues, workstation] = await Promise.all([
+    canWrite ? listDepartments(ctx, { activeOnly: true }) : Promise.resolve([]),
+    canWrite ? listAgents(ctx) : Promise.resolve([]),
+    getAgentWorkstation(ctx, agent.id),
+  ]);
+  const managers = colleagues.filter((c) => c.id !== agent.id && c.hierarchyLevel !== "specialist");
+  const ai = aiConnectionOf(agent.currentVersion?.aiProvider, agent.currentVersion?.aiModel);
   const current = agent.currentVersion;
 
   const statusButton = (status: "active" | "paused" | "archived", label: string, icon: React.ReactNode, confirm?: string) => (
@@ -43,7 +61,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         eyebrow={agent.department.name}
         title={
           <span className="flex items-center gap-4">
-            <AgentAvatar seed={agent.avatarSeed} url={agent.avatarUrl} name={agent.name} size={56} presence={agent.presence?.state} />
+            <AgentAvatar seed={agent.avatarSeed} url={agent.avatarUrl} appearance={agent.appearance} name={agent.name} size={56} presence={agent.presence?.state} />
             <span>
               {agent.name}
               <span className="block text-sm font-normal text-muted-foreground">
@@ -66,6 +84,86 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Perfil profissional</CardTitle>
+              <Link href={`/audit?entityType=agent&entityId=${agent.id}`} className="text-xs text-primary hover:underline">
+                Histórico de alterações
+              </Link>
+            </CardHeader>
+            <CardContent className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Hierarquia</p>
+                  <p>{HIERARCHY_LABELS[agent.hierarchyLevel]}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Reporta a:{" "}
+                    {agent.reportsTo ? (
+                      <Link className="text-foreground hover:underline" href={`/agents/${agent.reportsTo.id}`}>
+                        {agent.reportsTo.name}
+                      </Link>
+                    ) : (
+                      "Proprietário"
+                    )}
+                  </p>
+                  {agent.directReports.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Lidera:{" "}
+                      {agent.directReports.map((r, i) => (
+                        <span key={r.id}>
+                          <Link className="text-foreground hover:underline" href={`/agents/${r.id}`}>
+                            {r.name}
+                          </Link>
+                          {i < agent.directReports.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Personalidade profissional</p>
+                  <p>{agent.personality || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Modelo de IA</p>
+                  <p>{agent.currentVersion?.aiProvider ? `${agent.currentVersion.aiProvider} · ${agent.currentVersion.aiModel ?? "—"}` : "Não configurado"}</p>
+                  <p className="text-xs text-warning">{AI_CONNECTION_LABELS[ai]}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estação de trabalho</p>
+                  <p>
+                    {workstation.resting
+                      ? "Sala de Lazer (pausado)"
+                      : workstation.zone
+                        ? `${getDepartmentZone(workstation.zone)?.label} · mesa ${workstation.desk}`
+                        : "Sem sala no escritório"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Cadastrado em {formatDateTime(agent.createdAt)}</p>
+                </div>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Especialidades</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {agent.specialties.length ? agent.specialties.map((s) => <Badge key={s}>{s}</Badge>) : <span className="text-muted-foreground">—</span>}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Responsabilidades</p>
+                  {agent.responsibilities.length ? (
+                    <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">
+                      {agent.responsibilities.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div>
@@ -106,6 +204,14 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                   <Field label="Ferramentas autorizadas" name="allowedTools">
                     <ToolPicker selected={current?.allowedTools ?? []} />
                   </Field>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Provedor de IA (opcional)" name="aiProvider" hint="Nenhuma integração de IA está ativa nesta fase.">
+                      <Input id="aiProvider" name="aiProvider" defaultValue={current?.aiProvider ?? ""} maxLength={80} placeholder="ex.: anthropic" />
+                    </Field>
+                    <Field label="Modelo de IA (opcional)" name="aiModel">
+                      <Input id="aiModel" name="aiModel" defaultValue={current?.aiModel ?? ""} maxLength={80} />
+                    </Field>
+                  </div>
                   <Field label="Nota da alteração" name="changeNote">
                     <Input id="changeNote" name="changeNote" required minLength={3} maxLength={500} placeholder="O que mudou e por quê" />
                   </Field>
@@ -209,6 +315,32 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                   </Field>
                   <Field label="Descrição" name="description">
                     <Textarea id="description" name="description" defaultValue={agent.description} maxLength={2000} />
+                  </Field>
+                  <Field label="Especialidades (uma por linha)" name="specialties">
+                    <Textarea id="specialties" name="specialties" defaultValue={agent.specialties.join("\n")} />
+                  </Field>
+                  <Field label="Responsabilidades (uma por linha)" name="responsibilities">
+                    <Textarea id="responsibilities" name="responsibilities" defaultValue={agent.responsibilities.join("\n")} />
+                  </Field>
+                  <Field label="Personalidade profissional" name="personality">
+                    <Input id="personality" name="personality" defaultValue={agent.personality} maxLength={500} />
+                  </Field>
+                  <Field label="Nível hierárquico" name="hierarchyLevel">
+                    <Select id="hierarchyLevel" name="hierarchyLevel" defaultValue={agent.hierarchyLevel}>
+                      <option value="specialist">Especialista</option>
+                      <option value="director">Diretor de departamento</option>
+                      <option value="coo">Diretor de Operações (COO)</option>
+                    </Select>
+                  </Field>
+                  <Field label="Reporta a" name="reportsToAgentId">
+                    <Select id="reportsToAgentId" name="reportsToAgentId" defaultValue={agent.reportsToAgentId ?? ""}>
+                      <option value="">Proprietário</option>
+                      {managers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} · {m.title}
+                        </option>
+                      ))}
+                    </Select>
                   </Field>
                   <Field label="Avatar (URL https)" name="avatarUrl">
                     <Input id="avatarUrl" name="avatarUrl" type="url" defaultValue={agent.avatarUrl ?? ""} maxLength={500} />

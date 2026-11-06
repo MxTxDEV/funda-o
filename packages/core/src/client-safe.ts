@@ -7,3 +7,4 @@ export * from "./tasks/state-machine";
 export * from "./office";
 export * from "./validation";
 export { PERMISSIONS, ROLE_PERMISSIONS, can, type Permission, type Actor, type UserActor } from "./auth/permissions";
+export * from "./agent-authority";

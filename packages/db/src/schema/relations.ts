@@ -12,6 +12,8 @@ export const departmentsRelations = relations(departments, ({ many }) => ({
 
 export const agentsRelations = relations(agents, ({ one, many }) => ({
   department: one(departments, { fields: [agents.departmentId], references: [departments.id] }),
+  reportsTo: one(agents, { fields: [agents.reportsToAgentId], references: [agents.id], relationName: "reports_to" }),
+  directReports: many(agents, { relationName: "reports_to" }),
   currentVersion: one(agentVersions, { fields: [agents.currentVersionId], references: [agentVersions.id] }),
   versions: many(agentVersions),
   presence: one(agentPresence, { fields: [agents.id], references: [agentPresence.agentId] }),

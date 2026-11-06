@@ -1,4 +1,5 @@
 import {
+  AGENT_HIERARCHY_LEVELS,
   AGENT_STATUSES,
   APPROVAL_STATUSES,
   CONVERSATION_KINDS,
@@ -68,6 +69,52 @@ export type DepartmentUpdateInput = z.input<typeof departmentUpdateSchema>;
 export const departmentActiveSchema = z.object({ isActive: formBool });
 
 // ---------- Agents ----------
+/** List of short items; accepts an array or a textarea value (one item per line). */
+const itemList = (maxItems: number) =>
+  z
+    .union([z.array(z.string()), z.string()])
+    .optional()
+    .transform((v) =>
+      v === undefined
+        ? undefined
+        : Array.from(new Set((typeof v === "string" ? v.split(/\r?\n/) : v).map((i) => i.trim()).filter(Boolean))),
+    )
+    .pipe(z.array(z.string().max(160)).max(maxItems).optional());
+
+const hexOrUndefined = z.string().regex(/^#[0-9a-fA-F]{6}$/).optional();
+export const appearanceSchema = z
+  .object({
+    body: z.enum(["feminine", "masculine"]).optional(),
+    skin: hexOrUndefined,
+    hair: hexOrUndefined,
+    hairStyle: z.enum(["short", "side", "long", "bun", "curly", "bald", "ponytail"]).optional(),
+    outfit: z.enum(["suit", "blazer", "shirt", "sweater", "polo"]).optional(),
+    outfitColor: hexOrUndefined,
+    glasses: z.boolean().optional(),
+    beard: z.boolean().optional(),
+    tie: z.boolean().optional(),
+  })
+  .strict();
+
+const aiField = z
+  .string()
+  .trim()
+  .max(80)
+  .optional()
+  .transform((v) => v || null);
+
+const profileExtras = {
+  specialties: itemList(12),
+  responsibilities: itemList(20),
+  personality: z.string().trim().max(500).optional(),
+  hierarchyLevel: z.enum(AGENT_HIERARCHY_LEVELS).optional(),
+  reportsToAgentId: z
+    .union([z.literal(""), z.uuid()])
+    .nullable()
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
+  appearance: appearanceSchema.optional(),
+};
 const agentProfile = {
   departmentId: z.uuid({ message: "Selecione um departamento" }),
   name: trimmed(2, 80),
@@ -82,6 +129,9 @@ const agentProfile = {
 
 export const agentCreateSchema = z.object({
   ...agentProfile,
+  ...profileExtras,
+  aiProvider: aiField,
+  aiModel: aiField,
   status: z.enum(AGENT_STATUSES).default("active"),
   instructions: z.string().trim().min(10, "Descreva as instruções (mínimo 10 caracteres)").max(20000),
   allowedTools: toolList.default([]),
@@ -100,6 +150,7 @@ export const agentUpdateSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v === "" ? null : v)),
+  ...profileExtras,
 });
 export type AgentUpdateInput = z.input<typeof agentUpdateSchema>;
 
@@ -108,6 +159,8 @@ export const agentStatusSchema = z.object({ status: z.enum(AGENT_STATUSES) });
 export const agentVersionCreateSchema = z.object({
   instructions: z.string().trim().min(10).max(20000),
   allowedTools: toolList.default([]),
+  aiProvider: aiField,
+  aiModel: aiField,
   changeNote: z.string().trim().min(3, "Descreva a alteração").max(500),
 });
 export type AgentVersionCreateInput = z.input<typeof agentVersionCreateSchema>;

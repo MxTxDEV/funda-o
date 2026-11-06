@@ -1,6 +1,7 @@
 /** Plain enum values with no runtime dependencies (safe to import in client bundles). */
 export const USER_ROLES = ["owner", "admin", "operator", "viewer"] as const;
 export const AGENT_STATUSES = ["active", "paused", "archived"] as const;
+export const AGENT_HIERARCHY_LEVELS = ["coo", "director", "specialist"] as const;
 export const TASK_STATUSES = [
   "pending",
   "queued",

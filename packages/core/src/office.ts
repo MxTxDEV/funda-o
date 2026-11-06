@@ -7,7 +7,7 @@ export const DEPARTMENT_ZONES = [
     key: "strategy",
     label: "Estratégia & Pesquisa",
     responsibilities: ["Pesquisa de mercado", "Análise de concorrentes", "Identificação de oportunidades", "Pesquisa de público", "Planejamento estratégico"],
-    keywords: ["estrat", "pesquis", "intelig", "mercado", "research"],
+    keywords: ["estratégia", "estrategia", "pesquis", "intelig", "mercado", "research"],
   },
   {
     key: "offers",
@@ -33,6 +33,12 @@ export const DEPARTMENT_ZONES = [
     responsibilities: ["Meta Ads", "Planejamento de campanhas", "Análise de CPA", "Análise de ROAS", "Testes", "Otimização de campanhas"],
     keywords: ["tráfego", "trafego", "perform", "ads", "mídia", "midia", "campanha"],
   },
+  {
+    key: "executive",
+    label: "Diretoria",
+    responsibilities: ["Coordenação dos departamentos", "Distribuição de demandas", "Acompanhamento de tarefas", "Relatórios ao proprietário", "Decisões e aprovações (proprietário)"],
+    keywords: ["diretoria", "direção", "direcao", "executiv", "gestão", "gestao", "operaç", "operac"],
+  },
 ] as const;
 
 export type DepartmentZoneKey = (typeof DEPARTMENT_ZONES)[number]["key"];
@@ -42,12 +48,22 @@ export function getDepartmentZone(key: string) {
   return DEPARTMENT_ZONES.find((z) => z.key === key);
 }
 
-/** Best zone for a department name, or null when no keyword matches. */
+/** Best zone for a department name, or null when no keyword matches (specific areas win over "Diretoria"). */
 export function matchZoneByName(name: string): DepartmentZoneKey | null {
   const n = name.toLowerCase();
   for (const zone of DEPARTMENT_ZONES) if (zone.keywords.some((k) => n.includes(k))) return zone.key;
   return null;
 }
+
+/** AI connection of an employee. No AI provider integration exists in this phase, so nobody is "connected". */
+export type AiConnection = "not_configured" | "configured_not_connected";
+export function aiConnectionOf(provider: string | null | undefined, model: string | null | undefined): AiConnection {
+  return provider && model ? "configured_not_connected" : "not_configured";
+}
+export const AI_CONNECTION_LABELS: Record<AiConnection, string> = {
+  not_configured: "IA não configurada — aguardando configuração",
+  configured_not_connected: "Modelo configurado — aguardando integração do Central Brain",
+};
 
 /**
  * Places departments in rooms: explicit assignments first, then name matching, then free rooms in
@@ -94,7 +110,7 @@ export function resolveDepartmentZones(
  * Status shown in the office, derived only from real data:
  * - executing: presence "working" (a task is in progress)
  * - awaiting_approval: presence "waiting_approval"
- * - working: idle but with tasks queued for execution
+ * - working: tasks queued, waiting for execution (shown as "Tarefa na fila", NOT as working)
  * - available: active, nothing assigned in flight
  * - resting: agent paused (shown in the lounge)
  * - communicating: reserved for the Central Brain integration (never produced today)
@@ -104,7 +120,7 @@ export type OfficeStatus = (typeof OFFICE_STATUSES)[number];
 
 export const OFFICE_STATUS_LABELS: Record<OfficeStatus, string> = {
   executing: "Em execução de tarefa",
-  working: "Trabalhando",
+  working: "Tarefa na fila",
   available: "Disponível",
   communicating: "Em comunicação",
   awaiting_approval: "Aguardando aprovação",

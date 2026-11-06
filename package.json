@@ -15,7 +15,8 @@
     "db:migrate": "pnpm --filter @vc/db db:migrate",
     "db:seed:admin": "pnpm --filter @vc/core db:seed:admin",
     "db:seed:demo": "pnpm --filter @vc/core db:seed:demo",
-    "db:demo:purge": "pnpm --filter @vc/core db:demo:purge"
+    "db:demo:purge": "pnpm --filter @vc/core db:demo:purge",
+    "db:seed:team": "pnpm --filter @vc/core db:seed:team"
   },
   "devDependencies": {
     "turbo": "2.11.10",

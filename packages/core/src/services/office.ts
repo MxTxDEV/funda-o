@@ -22,6 +22,7 @@ import {
   deriveOfficeStatus,
   type OfficeStatus,
   resolveDepartmentZones,
+  aiConnectionOf,
 } from "../office";
 import { idSchema } from "../validation";
 
@@ -45,6 +46,8 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
         currentTaskId: agentPresence.currentTaskId,
         allowedTools: agentVersions.allowedTools,
         version: agentVersions.version,
+        aiProvider: agentVersions.aiProvider,
+        aiModel: agentVersions.aiModel,
       })
       .from(agents)
       .leftJoin(agentPresence, eq(agentPresence.agentId, agents.id))
@@ -115,7 +118,8 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
   const conversationByAgent = new Map(directConversations.map((c) => [c.agentId, c.id]));
   const deskCounter = new Map<string, number>();
 
-  const officeAgents = agentRows.map(({ agent, presenceState, statusMessage, currentTaskId, allowedTools, version }) => {
+  const nameById = new Map(agentRows.map((r) => [r.agent.id, r.agent.name]));
+  const officeAgents = agentRows.map(({ agent, presenceState, statusMessage, currentTaskId, allowedTools, version, aiProvider, aiModel }) => {
     const mine = tasksByAgent.get(agent.id) ?? [];
     const queuedTasks = mine.filter((t) => t.status === "queued").length;
     const officeStatus: OfficeStatus = deriveOfficeStatus({ agentStatus: agent.status, presence: presenceState, queuedTasks });
@@ -128,6 +132,16 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
       title: agent.title,
       specialty: agent.specialty,
       description: agent.description,
+      specialties: agent.specialties,
+      responsibilities: agent.responsibilities,
+      personality: agent.personality,
+      hierarchyLevel: agent.hierarchyLevel,
+      reportsTo: agent.reportsToAgentId ? { id: agent.reportsToAgentId, name: nameById.get(agent.reportsToAgentId) ?? "—" } : null,
+      appearance: agent.appearance,
+      aiProvider: aiProvider ?? null,
+      aiModel: aiModel ?? null,
+      aiConnection: aiConnectionOf(aiProvider, aiModel),
+      createdAt: agent.createdAt.toISOString(),
       avatarSeed: agent.avatarSeed,
       avatarUrl: agent.avatarUrl,
       status: agent.status,
@@ -193,7 +207,9 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
     agents: officeAgents,
     metrics: {
       agents: officeAgents.length,
-      working: byStatus("executing") + byStatus("working"),
+      // Only employees actually executing a task count as working.
+      working: byStatus("executing"),
+      queued: byStatus("working"),
       available: byStatus("available"),
       resting: byStatus("resting"),
       activeTasks: activeTasks.length,
@@ -260,4 +276,24 @@ export async function setDepartmentOfficeZone(ctx: ServiceContext, departmentId:
     );
     return { zone, swappedWith };
   });
+}
+
+/** Workstation of an employee in the 3D office: room (zone) and desk number, derived like the office view. */
+export async function getAgentWorkstation(ctx: ServiceContext, agentId: string) {
+  assertCan(ctx.actor, "agents:read");
+  const [agent] = await ctx.db.select().from(agents).where(eq(agents.id, idSchema.parse(agentId)));
+  if (!agent) throw notFound("Funcionário");
+  const [deptRows, zoneRows, mates] = await Promise.all([
+    ctx.db.select().from(departments).orderBy(departments.createdAt),
+    ctx.db.select().from(departmentOfficeZones),
+    ctx.db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.departmentId, agent.departmentId), ne(agents.status, "archived")))
+      .orderBy(agents.createdAt),
+  ]);
+  const { placement } = resolveDepartmentZones(deptRows, new Map(zoneRows.map((z) => [z.departmentId, z.zone])));
+  const zone = placement.get(agent.departmentId)?.zone ?? null;
+  const desk = mates.findIndex((m) => m.id === agent.id);
+  return { zone, desk: desk >= 0 ? desk + 1 : null, resting: agent.status === "paused" };
 }

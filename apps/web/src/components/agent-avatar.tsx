@@ -1,4 +1,5 @@
 import type { PresenceState } from "@vc/core/client";
+import type { AgentAppearance } from "@vc/db";
 import { cn } from "@/lib/utils";
 import { PRESENCE_COLORS } from "./status";
 
@@ -26,7 +27,9 @@ export function AgentAvatar({
   size = 40,
   presence,
   className,
+  appearance,
 }: {
+  appearance?: AgentAppearance | null;
   seed: string;
   url?: string | null;
   name: string;
@@ -35,12 +38,16 @@ export function AgentAvatar({
   className?: string;
 }) {
   const h = hash(seed);
-  const skin = SKIN[h % SKIN.length]!;
-  const hair = HAIR[(h >>> 3) % HAIR.length]!;
-  const shirt = SHIRT[(h >>> 6) % SHIRT.length]!;
-  const hairStyle = (h >>> 9) % 4;
-  const glasses = ((h >>> 12) & 3) === 0;
-  const headset = ((h >>> 14) & 3) === 1;
+  const a = appearance ?? {};
+  const skin = a.skin ?? SKIN[h % SKIN.length]!;
+  const hair = a.hair ?? HAIR[(h >>> 3) % HAIR.length]!;
+  const shirt = a.outfitColor ?? SHIRT[(h >>> 6) % SHIRT.length]!;
+  const STYLE: Record<NonNullable<AgentAppearance["hairStyle"]>, number> = { short: 0, side: 3, curly: 1, long: 2, bun: 4, ponytail: 4, bald: 5 };
+  const hairStyle = a.hairStyle ? STYLE[a.hairStyle] : (h >>> 9) % 4;
+  const glasses = a.glasses ?? ((h >>> 12) & 3) === 0;
+  const headset = appearance ? false : ((h >>> 14) & 3) === 1;
+  const beard = a.beard ?? false;
+  const tie = a.tie ?? false;
 
   return (
     <span className={cn("relative inline-flex shrink-0", className)} style={{ width: size, height: size }}>
@@ -69,6 +76,14 @@ export function AgentAvatar({
             <path d="M19 33c-2-14 5-21 13-21s15 7 13 21l-2 8c0-8-1-15-3-18-5 2-11 2-16 0-2 3-3 10-3 18z" fill={hair} />
           )}
           {hairStyle === 3 && <path d="M22 22c2-6 6-9 10-9s8 3 10 9c-6-2-14-2-20 0z" fill={hair} />}
+          {hairStyle === 4 && (
+            <>
+              <path d="M21 26c0-9 5-14 11-14s11 5 11 14c-3-5-7-7-11-7s-8 2-11 7z" fill={hair} />
+              <circle cx="32" cy="12" r="5" fill={hair} />
+            </>
+          )}
+          {beard && <path d="M22 30c1 8 5 12 10 12s9-4 10-12c-2 4-6 6-10 6s-8-2-10-6z" fill={hair} opacity=".9" />}
+          {tie && <path d="M30.5 45h3l1 9-2.5 4-2.5-4z" fill="#0b0e13" />}
           {/* eyes */}
           <circle cx="27.5" cy="28" r="1.4" fill="#141821" />
           <circle cx="36.5" cy="28" r="1.4" fill="#141821" />

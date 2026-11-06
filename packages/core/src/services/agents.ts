@@ -1,10 +1,11 @@
-import { type AgentStatus, agents, agentVersions, type DbExecutor, departments, tasks } from "@vc/db";
+import { type AgentHierarchyLevel, type AgentStatus, agents, agentVersions, type DbExecutor, departments, tasks } from "@vc/db";
 import { and, desc, eq, max } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { diff, writeAudit } from "../audit";
 import { assertCan } from "../auth/permissions";
 import type { ServiceContext } from "../context";
-import { AppError, notFound } from "../errors";
+import { canManage, HIERARCHY_LABELS } from "../agent-authority";
+import { AppError, invalidState, notFound } from "../errors";
 import {
   type AgentCreateInput,
   agentCreateSchema,
@@ -31,10 +32,33 @@ export async function listAgents(
     with: {
       department: { columns: { id: true, name: true, color: true, isActive: true } },
       presence: true,
-      currentVersion: { columns: { id: true, version: true, allowedTools: true } },
+      currentVersion: { columns: { id: true, version: true, allowedTools: true, aiProvider: true, aiModel: true } },
+      reportsTo: { columns: { id: true, name: true } },
     },
     orderBy: (a, { asc }) => [asc(a.name)],
   });
+}
+
+/**
+ * Validates the reporting line: the manager exists, is not archived, ranks above the employee
+ * (COO > director > specialist) and no cycle is created.
+ */
+async function assertReportingLine(db: DbExecutor, agentId: string | null, level: AgentHierarchyLevel, managerId: string | null | undefined) {
+  if (!managerId) return;
+  if (managerId === agentId) throw invalidState("Um funcionário não pode reportar a si mesmo.");
+  const [manager] = await db.select().from(agents).where(eq(agents.id, managerId));
+  if (!manager) throw notFound("Gestor");
+  if (manager.status === "archived") throw invalidState("O gestor está arquivado.");
+  if (!canManage(manager.hierarchyLevel, level)) {
+    throw invalidState(`${HIERARCHY_LABELS[manager.hierarchyLevel]} não pode ser gestor de ${HIERARCHY_LABELS[level].toLowerCase()}.`);
+  }
+  // Walk up the chain to prevent cycles.
+  let cursor: string | null = manager.reportsToAgentId;
+  for (let i = 0; cursor && i < 20; i++) {
+    if (cursor === agentId) throw invalidState("A hierarquia não pode ter ciclos.");
+    const [next] = await db.select({ up: agents.reportsToAgentId }).from(agents).where(eq(agents.id, cursor));
+    cursor = next?.up ?? null;
+  }
 }
 
 export async function getAgent(ctx: ServiceContext, id: string) {
@@ -46,6 +70,8 @@ export async function getAgent(ctx: ServiceContext, id: string) {
       presence: true,
       currentVersion: true,
       versions: { orderBy: (v, { desc }) => [desc(v.version)] },
+      reportsTo: { columns: { id: true, name: true, title: true, hierarchyLevel: true } },
+      directReports: { columns: { id: true, name: true, title: true, status: true }, orderBy: (a, { asc }) => [asc(a.name)] },
     },
   });
   if (!agent) throw notFound("Funcionário");
@@ -72,13 +98,15 @@ async function assertDepartmentUsable(db: DbExecutor, departmentId: string) {
   return dept;
 }
 
-export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, opts: { isDemo?: boolean } = {}) {
+export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, opts: { isDemo?: boolean; seedKey?: string } = {}) {
   assertCan(ctx.actor, "agents:write");
   const input = agentCreateSchema.parse(raw);
   const userId = ctx.actor.type === "user" ? ctx.actor.userId : null;
 
   return ctx.db.transaction(async (tx) => {
     await assertDepartmentUsable(tx, input.departmentId);
+    const level = input.hierarchyLevel ?? "specialist";
+    await assertReportingLine(tx, null, level, input.reportsToAgentId);
     const [agent] = await tx
       .insert(agents)
       .values({
@@ -90,6 +118,13 @@ export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, op
         avatarUrl: input.avatarUrl ?? null,
         avatarSeed: randomBytes(6).toString("hex"),
         status: input.status,
+        specialties: input.specialties ?? [],
+        responsibilities: input.responsibilities ?? [],
+        personality: input.personality ?? "",
+        hierarchyLevel: level,
+        reportsToAgentId: input.reportsToAgentId ?? null,
+        appearance: input.appearance ?? {},
+        seedKey: opts.seedKey ?? null,
         isDemo: opts.isDemo ?? false,
         createdById: userId,
       })
@@ -103,6 +138,8 @@ export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, op
         version: 1,
         instructions: input.instructions,
         allowedTools: input.allowedTools,
+        aiProvider: input.aiProvider,
+        aiModel: input.aiModel,
         changeNote: input.changeNote,
         createdById: userId,
       })
@@ -128,6 +165,8 @@ export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, op
           status: input.status,
           version: 1,
           allowedTools: input.allowedTools,
+          hierarchyLevel: level,
+          reportsToAgentId: input.reportsToAgentId ?? null,
         },
       },
       ctx.meta,
@@ -145,6 +184,17 @@ export async function updateAgent(ctx: ServiceContext, id: string, raw: AgentUpd
     if (!current) throw notFound("Funcionário");
     if (input.departmentId && input.departmentId !== current.departmentId) {
       await assertDepartmentUsable(tx, input.departmentId);
+    }
+    const level = input.hierarchyLevel ?? current.hierarchyLevel;
+    if (input.reportsToAgentId !== undefined || input.hierarchyLevel !== undefined) {
+      await assertReportingLine(tx, agentId, level, input.reportsToAgentId === undefined ? current.reportsToAgentId : input.reportsToAgentId);
+    }
+    if (input.hierarchyLevel !== undefined && input.hierarchyLevel !== current.hierarchyLevel) {
+      // Existing reports must still rank below the new level.
+      const reports = await tx.select().from(agents).where(eq(agents.reportsToAgentId, agentId));
+      if (reports.some((r) => !canManage(level, r.hierarchyLevel))) {
+        throw invalidState("Reatribua os subordinados antes de rebaixar este funcionário na hierarquia.");
+      }
     }
     const [updated] = await tx.update(agents).set(input).where(eq(agents.id, agentId)).returning();
     await writeAudit(
@@ -210,6 +260,8 @@ export async function createAgentVersion(ctx: ServiceContext, id: string, raw: A
         version: nextVersion,
         instructions: input.instructions,
         allowedTools: input.allowedTools,
+        aiProvider: input.aiProvider,
+        aiModel: input.aiModel,
         changeNote: input.changeNote,
         createdById: ctx.actor.type === "user" ? ctx.actor.userId : null,
       })

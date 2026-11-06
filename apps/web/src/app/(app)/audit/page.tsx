@@ -20,19 +20,21 @@ const ENTITY_LINKS: Record<string, string> = {
   conversation: "/conversations/",
 };
 
-export default async function AuditPage({ searchParams }: { searchParams: Promise<{ entityType?: string; action?: string; page?: string }> }) {
+export default async function AuditPage({ searchParams }: { searchParams: Promise<{ entityType?: string; entityId?: string; action?: string; page?: string }> }) {
   const sp = await searchParams;
   const ctx = await getServiceContext();
   assertCan(ctx.actor, "audit:read");
   const page = Math.max(1, Number(sp.page) || 1);
   const limit = 50;
   const entityType = ENTITY_TYPES.includes(sp.entityType ?? "") ? sp.entityType : undefined;
-  const { items, total } = await listAuditLogs(ctx, { entityType, action: sp.action, limit, offset: (page - 1) * limit });
+  const entityId = /^[0-9a-f-]{36}$/.test(sp.entityId ?? "") ? sp.entityId : undefined;
+  const { items, total } = await listAuditLogs(ctx, { entityType, entityId, action: sp.action, limit, offset: (page - 1) * limit });
   const pages = Math.max(1, Math.ceil(total / limit));
   const pageHref = (p: number) => {
     const q = new URLSearchParams();
     if (entityType) q.set("entityType", entityType);
     if (sp.action) q.set("action", sp.action);
+    if (entityId) q.set("entityId", entityId);
     q.set("page", String(p));
     return `/audit?${q}`;
   };

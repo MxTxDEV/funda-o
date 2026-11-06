@@ -38,12 +38,24 @@ export const ROLE_PERMISSIONS: Record<UserRole, ReadonlySet<Permission>> = {
 export type UserActor = { type: "user"; userId: string; email: string; role: UserRole };
 /** Internal actors (worker process, CLI scripts). They never come from an HTTP request. */
 export type InternalActor = { type: "worker" | "system"; label: string };
-export type Actor = UserActor | InternalActor;
+/**
+ * A virtual employee acting through the Central Brain (future). Agents get a minimal permission set
+ * by hierarchy level and can NEVER decide approvals, manage users or change the organization.
+ */
+export type AgentActor = { type: "agent"; agentId: string; label: string; level: "coo" | "director" | "specialist" };
+export type Actor = UserActor | InternalActor | AgentActor;
+
+const AGENT_PERMISSIONS: Record<AgentActor["level"], ReadonlySet<Permission>> = {
+  coo: new Set<Permission>([...READ, "tasks:write", "conversations:write"]),
+  director: new Set<Permission>([...READ, "tasks:write", "conversations:write"]),
+  specialist: new Set<Permission>(["tasks:read", "agents:read", "departments:read", "conversations:read", "conversations:write"]),
+};
 
 export const WORKER_ACTOR: InternalActor = { type: "worker", label: "worker" };
 export const SYSTEM_ACTOR: InternalActor = { type: "system", label: "system" };
 
 export function can(actor: Actor, permission: Permission): boolean {
+  if (actor.type === "agent") return AGENT_PERMISSIONS[actor.level].has(permission);
   if (actor.type !== "user") return true;
   return ROLE_PERMISSIONS[actor.role]?.has(permission) ?? false;
 }

@@ -47,7 +47,7 @@ describe("office snapshot", () => {
     expect(byName.Caio!.officeStatus).toBe("resting");
     expect(s.agents.map((a) => a.deskIndex)).toEqual([0, 1, 2]);
     expect(s.departments[0]).toMatchObject({ zone: "offers", zoneSource: "auto", agentCount: 3, activeTaskCount: 2, availableCount: 0 });
-    expect(s.metrics).toMatchObject({ agents: 3, working: 2, resting: 1, activeTasks: 2, departments: 1 });
+    expect(s.metrics).toMatchObject({ agents: 3, working: 1, queued: 1, resting: 1, activeTasks: 2, departments: 1 });
   });
 
   it("assigns and swaps rooms with audit, respecting permissions", async () => {

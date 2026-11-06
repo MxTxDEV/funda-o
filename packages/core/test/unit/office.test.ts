@@ -18,8 +18,8 @@ describe("office zones", () => {
     expect(placement.get("b")?.zone).toBe("offers");
     expect(placement.get("a")?.zone).toBe("strategy");
     expect(new Set([...placement.values()].map((p) => p.zone)).size).toBe(placement.size);
-    expect(placement.size).toBe(5);
-    expect(unplaced).toEqual(["g", "h"]);
+    expect(placement.size).toBe(6);
+    expect(unplaced).toEqual(["h"]);
   });
 
   it("ignores invalid stored zones", () => {

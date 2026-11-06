@@ -29,6 +29,13 @@
       "when": 1793928953189,
       "tag": "0003_office_zones",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793930596025,
+      "tag": "0004_team_profile",
+      "breakpoints": true
     }
   ]
 }
