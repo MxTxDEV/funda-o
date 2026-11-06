@@ -1,3 +1,4 @@
+export * from "@vc/db/values";
 export * from "./errors";
 export * from "./logger";
 export * from "./context";

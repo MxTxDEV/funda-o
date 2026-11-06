@@ -1,0 +1,95 @@
+import { assertCan, listDepartments } from "@vc/core";
+import Link from "next/link";
+import { ActionForm, Field, SubmitButton } from "@/components/forms";
+import { EmptyState, PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input, Select, Textarea } from "@/components/ui/input";
+import { getServiceContext } from "@/lib/session";
+import { createAgentAction } from "../../actions/agents";
+import { ToolPicker } from "../tool-picker";
+
+export const metadata = { title: "Novo funcionário" };
+
+export default async function NewAgentPage({ searchParams }: { searchParams: Promise<{ departmentId?: string }> }) {
+  const { departmentId } = await searchParams;
+  const ctx = await getServiceContext();
+  assertCan(ctx.actor, "agents:write");
+  const departments = await listDepartments(ctx, { activeOnly: true });
+
+  if (departments.length === 0) {
+    return (
+      <>
+        <PageHeader eyebrow="Equipe" title="Novo funcionário" />
+        <EmptyState
+          title="Crie um departamento ativo primeiro"
+          action={
+            <Button asChild>
+              <Link href="/departments">Ir para departamentos</Link>
+            </Button>
+          }
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader eyebrow="Equipe" title="Novo funcionário virtual" description="As instruções e ferramentas formam a versão 1. Alterações futuras criam novas versões." />
+      <ActionForm action={createAgentAction} className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Perfil</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <Field label="Nome" name="name">
+              <Input id="name" name="name" required minLength={2} maxLength={80} />
+            </Field>
+            <Field label="Cargo" name="title">
+              <Input id="title" name="title" required minLength={2} maxLength={80} placeholder="Ex.: Copywriter Sênior" />
+            </Field>
+            <Field label="Departamento" name="departmentId">
+              <Select id="departmentId" name="departmentId" defaultValue={departmentId} required>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Status inicial" name="status">
+              <Select id="status" name="status" defaultValue="active">
+                <option value="active">Ativo</option>
+                <option value="paused">Pausado</option>
+              </Select>
+            </Field>
+            <Field label="Especialidade" name="specialty" className="md:col-span-2">
+              <Input id="specialty" name="specialty" required minLength={2} maxLength={120} placeholder="Ex.: Copy de resposta direta para infoprodutos" />
+            </Field>
+            <Field label="Descrição" name="description" className="md:col-span-2">
+              <Textarea id="description" name="description" maxLength={2000} />
+            </Field>
+            <Field label="Avatar (URL https, opcional)" name="avatarUrl" className="md:col-span-2" hint="Sem URL, um personagem estilizado é gerado automaticamente.">
+              <Input id="avatarUrl" name="avatarUrl" type="url" placeholder="https://..." maxLength={500} />
+            </Field>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Versão 1 — instruções e ferramentas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Field label="Instruções" name="instructions" hint="Serão usadas pelo Central Brain quando integrado.">
+              <Textarea id="instructions" name="instructions" required minLength={10} maxLength={20000} className="min-h-40 font-mono text-xs" />
+            </Field>
+            <Field label="Ferramentas autorizadas" name="allowedTools">
+              <ToolPicker />
+            </Field>
+            <input type="hidden" name="changeNote" value="Versão inicial" />
+            <SubmitButton className="w-full">Cadastrar funcionário</SubmitButton>
+          </CardContent>
+        </Card>
+      </ActionForm>
+    </>
+  );
+}

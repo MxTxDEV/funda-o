@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* Virtual Company — design tokens. Dark graphite command-center theme with electric blue accents. */
+:root {
+  --background: #090c11;
+  --surface: #0f131a;
+  --surface-2: #151a23;
+  --surface-3: #1b2230;
+  --border: #232b38;
+  --border-strong: #2f3949;
+  --foreground: #e7ecf3;
+  --muted-foreground: #8792a5;
+  --primary: #3d7bff;
+  --primary-hover: #5a90ff;
+  --primary-foreground: #ffffff;
+  --cyan: #22d3ee;
+  --violet: #a78bfa;
+  --success: #22c55e;
+  --warning: #f5a524;
+  --danger: #ef4444;
+  --ring: #3d7bff;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-cyan: var(--cyan);
+  --color-violet: var(--violet);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+  --animate-pulse-ring: pulse-ring 2s ease-out infinite;
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 60%, transparent); }
+    70% { box-shadow: 0 0 0 8px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 40%, transparent);
+  }
+}
+
+/* Subtle blueprint grid used behind the command center. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.glow-top {
+  background: radial-gradient(1200px 400px at 50% -120px, color-mix(in srgb, var(--primary) 18%, transparent), transparent 70%);
+}
+
+/* Office floor texture (top-down wood/carpet tiles). */
+.office-floor {
+  background-color: #10151d;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.015) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.015) 75%),
+    linear-gradient(45deg, rgba(255, 255, 255, 0.015) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.015) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
