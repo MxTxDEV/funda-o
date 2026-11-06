@@ -4,5 +4,6 @@ export * from "./labels";
 export * from "./tools";
 export * from "./task-types";
 export * from "./tasks/state-machine";
+export * from "./office";
 export * from "./validation";
 export { PERMISSIONS, ROLE_PERMISSIONS, can, type Permission, type Actor, type UserActor } from "./auth/permissions";

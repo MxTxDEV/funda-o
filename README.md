@@ -20,6 +20,7 @@ acoplados o **Central Brain**, os funcionários inteligentes e o **escritório 3
 | Presença | Estado de cada funcionário sincronizado com as tarefas na mesma transação |
 | Conversas | Individuais, por departamento e gerais (sem respostas simuladas) |
 | Dashboard | Centro de comando com dados reais do banco, fila e worker |
+| Escritório Virtual 3D | Ambiente 3D interativo (React Three Fiber): salas por departamento, Central Brain, Diretoria, Reuniões, Lazer; funcionários reais com status ao vivo — ver [docs/virtual-office.md](docs/virtual-office.md) |
 | Auditoria | Log append-only (protegido por trigger no Postgres) de todas as operações relevantes |
 | API REST | `/api/v1/*` autenticada, com rate limit, checagem de origem e `Idempotency-Key` |
 
@@ -64,4 +65,5 @@ Detalhes em [docs/development.md](docs/development.md).
 - [API REST](docs/api.md)
 - [Relatório de testes](docs/testing.md)
 - [Limitações conhecidas e próximas etapas](docs/roadmap.md)
+- [Escritório Virtual 3D](docs/virtual-office.md)
 - [Registro de progresso](docs/progress.md)

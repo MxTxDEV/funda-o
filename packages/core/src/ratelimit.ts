@@ -26,7 +26,8 @@ async function postgresCounter(key: string, windowSeconds: number) {
       },
     })
     .returning({ count: rateLimits.count, ttl: sql<number>`ceil(extract(epoch from ${rateLimits.resetAt} - now()))::int` });
-  return { count: row?.count ?? 0, ttl: Number(row?.ttl ?? windowSeconds) };
+  // A statement that waited on the row lock may compute a slightly larger TTL: clamp to the window.
+  return { count: row?.count ?? 0, ttl: Math.min(Number(row?.ttl ?? windowSeconds), windowSeconds) };
 }
 
 /**

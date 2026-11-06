@@ -59,3 +59,16 @@ concluída → dashboard → auditoria; cancelamento; conversa; API REST (leitur
   execução do servidor standalone e do worker compilado).
 - **Deploy real na Vercel** e serviços gerenciados (Neon/Redis gerenciado).
 - O workflow de CI (`.github/workflows/ci.yml`) foi escrito mas ainda não rodou no GitHub.
+
+## Atualização — Escritório Virtual 3D
+
+| Suíte | Resultado |
+| --- | --- |
+| `@vc/core` (inclui snapshot do escritório, salas, troca auditada, conversa sem duplicar) | ✅ 61/61 |
+| `@vc/engine` | ✅ 7/7 |
+| `@vc/web` (inclui layout espacial) | ✅ 7/7 |
+| E2E (inclui 4 cenários do escritório: canvas + indicadores × API, seleção e conversa, ambientes/Central Brain/câmera, fallback sem WebGL) | ✅ 11/11 |
+| Raycasting 3D (clique no piso e em móveis da Diretoria) | ✅ verificado em navegador headless com WebGL por software |
+
+Problemas encontrados e corrigidos: rótulos 3D cresciam demais de perto (agora tamanho fixo); enquadramento escondia o alvo
+atrás do painel; clique em móveis não selecionava a sala; `ttl` do limitador via Postgres podia exceder a janela sob concorrência.

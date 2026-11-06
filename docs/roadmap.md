@@ -10,7 +10,7 @@
    são aplicados, mas não há tela de convite/edição de usuários nem 2FA.
 4. **API apenas com sessão de navegador.** Não há tokens de API para integrações máquina-a-máquina.
 5. **Atualização "ao vivo" por polling** (`router.refresh` a cada 2,5–8 s), não por WebSocket/SSE.
-6. **Escritório 2D provisório** — o escritório 3D é uma fase futura (`agent_presence.location` reservado).
+6. **Escritório 3D com geometria procedural** — modelos profissionais (GLTF) podem substituir `scene/shared.ts`; até 12 estações por sala e 5 salas de departamento.
 7. **Worker fora da Vercel:** exige um host de containers (Railway/Render/Fly/VPS).
 8. **Rate limit em janela fixa** e fail-closed: se o Redis cair, login e mutações ficam indisponíveis.
 9. **CSP com `'unsafe-inline'`** em scripts (necessário para o Next sem nonces). Endurecer com nonces.
@@ -35,4 +35,4 @@
 7. **Observabilidade:** logs estruturados enviados a um coletor, métricas da fila (Bull Board ou
    painel próprio), alertas para worker offline e falhas repetidas.
 8. **Integração Meta Ads (somente leitura primeiro)**, com segredos por conexão criptografados.
-9. **Escritório 3D** (React Three Fiber) alimentado por `agent_presence`.
+9. **Escritório 3D v2:** assets GLTF, reuniões reais e estado "Em comunicação" quando o Central Brain coordenar agentes, layout editável.

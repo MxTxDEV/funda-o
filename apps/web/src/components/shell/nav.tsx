@@ -1,5 +1,6 @@
 "use client";
 import {
+  Box,
   Building2,
   CheckCheck,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "Centro de comando", icon: LayoutDashboard, exact: true },
+  { href: "/office", label: "Escritório Virtual", icon: Box },
   { href: "/departments", label: "Departamentos", icon: Building2 },
   { href: "/agents", label: "Funcionários", icon: Users },
   { href: "/tasks", label: "Tarefas", icon: ListTodo },

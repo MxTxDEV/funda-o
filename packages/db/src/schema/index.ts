@@ -9,3 +9,4 @@ export * from "./audit";
 export * from "./presence";
 export * from "./relations";
 export * from "./rate-limits";
+export * from "./office";

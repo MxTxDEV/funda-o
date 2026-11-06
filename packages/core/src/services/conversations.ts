@@ -117,3 +117,17 @@ export async function archiveConversation(ctx: ServiceContext, conversationId: s
     return updated;
   });
 }
+
+/** Returns the open direct conversation with an agent, creating it if needed (explicit user action). */
+export async function getOrCreateDirectConversation(ctx: ServiceContext, agentId: string) {
+  assertCan(ctx.actor, "conversations:write");
+  const id = idSchema.parse(agentId);
+  const [existing] = await ctx.db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.kind, "direct"), eq(conversations.agentId, id), isNull(conversations.archivedAt)))
+    .orderBy(conversations.createdAt)
+    .limit(1);
+  if (existing) return { conversation: existing, created: false };
+  return { conversation: await createConversation(ctx, { kind: "direct", agentId: id }), created: true };
+}

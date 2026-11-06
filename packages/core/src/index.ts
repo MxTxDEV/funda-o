@@ -21,3 +21,5 @@ export * from "./services/conversations";
 export * from "./services/dashboard";
 export * from "./services/audit-query";
 export * from "./services/users";
+export * from "./services/office";
+export * from "./office";
