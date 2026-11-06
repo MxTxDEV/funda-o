@@ -116,3 +116,18 @@ describe("demo seed", () => {
     expect((await getDashboard(ctx)).hasDemoData).toBe(false);
   });
 });
+
+describe("rate limiting without Redis", () => {
+  it("falls back to an atomic Postgres window", async () => {
+    const saved = process.env.REDIS_URL;
+    delete process.env.REDIS_URL;
+    try {
+      const key = `pg:${Math.random()}`;
+      const results = await Promise.all(Array.from({ length: 5 }, () => rateLimit(key, 3, 60)));
+      expect(results.filter((r) => r.allowed)).toHaveLength(3);
+      expect(results.every((r) => r.resetInSeconds > 0 && r.resetInSeconds <= 60)).toBe(true);
+    } finally {
+      process.env.REDIS_URL = saved;
+    }
+  });
+});

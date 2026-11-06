@@ -8,7 +8,7 @@ export const db = () => getDb();
 
 export async function resetState() {
   await getDb().execute(
-    sql`TRUNCATE users, departments, agents, agent_versions, tasks, task_events, approvals, conversations, messages, audit_logs, agent_presence RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE rate_limits, users, departments, agents, agent_versions, tasks, task_events, approvals, conversations, messages, audit_logs, agent_presence RESTART IDENTITY CASCADE`,
   );
   await getTasksQueue().obliterate({ force: true });
   const keys = await getRedis().keys("vc:rl:*");

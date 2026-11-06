@@ -1,5 +1,5 @@
 import { getDb } from "@vc/db";
-import { getRedis } from "@vc/queue";
+import { getRedis, redisUrlFromEnv } from "@vc/queue";
 import { sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,11 @@ export async function GET() {
       return "down" as const;
     }
   };
-  const [database, redis] = await Promise.all([check(() => getDb().execute(sql`select 1`)), check(() => getRedis().ping())]);
-  const ok = database === "up" && redis === "up";
-  return Response.json({ status: ok ? "ok" : "degraded", database, redis }, { status: ok ? 200 : 503 });
+  const [database, redis] = await Promise.all([
+    check(() => getDb().execute(sql`select 1`)),
+    redisUrlFromEnv() ? check(() => getRedis().ping()) : Promise.resolve("not_configured" as const),
+  ]);
+  // Without Redis the app works (login, CRUD) but the task queue is unavailable.
+  const status = database !== "up" ? "down" : redis === "up" ? "ok" : "degraded";
+  return Response.json({ status, database, redis }, { status: database === "up" ? 200 : 503 });
 }
