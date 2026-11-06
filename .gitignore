@@ -15,4 +15,6 @@ test-results/
 backups/
 *.tsbuildinfo
 next-env.d.ts
-e2e/.auth/
+**/e2e/.auth/
+dump.rdb
+*.rdb

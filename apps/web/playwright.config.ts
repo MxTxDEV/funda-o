@@ -29,9 +29,10 @@ export default defineConfig({
     : [
         { command: "pnpm start", url: `${baseURL}/api/health`, reuseExistingServer: true, timeout: 120_000 },
         {
+          // The worker exposes its own liveness endpoint so Playwright knows it is really running.
           command: "pnpm --filter @vc/worker dev",
-          // The worker has no HTTP port by default; Playwright only needs it started.
-          url: `${baseURL}/api/health`,
+          env: { WORKER_HEALTH_PORT: "8081" },
+          url: "http://127.0.0.1:8081/",
           reuseExistingServer: true,
           timeout: 120_000,
         },

@@ -1,0 +1,119 @@
+# Virtual Company — full stack (self-hosted / local production-like run).
+# Production deploy of the web app targets Vercel (see docs/deploy-vercel.md); this file runs
+# everything in containers: Postgres, Redis, migrations, web and worker.
+#
+#   cp .env.example .env   # fill AUTH_SECRET and POSTGRES_PASSWORD
+#   docker compose up -d --build
+#   docker compose run --rm migrate          # (runs automatically before web/worker)
+#   docker compose exec worker sh -c 'echo use pnpm db:seed:admin from the host or see docs'
+name: virtual-company
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://vc:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/virtual_company
+  REDIS_URL: redis://redis:6379
+  QUEUE_PREFIX: ${QUEUE_PREFIX:-vc}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: virtual_company
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vc -d virtual_company"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF persistence: queued jobs survive restarts. noeviction is required by BullMQ.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+  migrate:
+    build: { context: ., dockerfile: docker/worker.Dockerfile }
+    image: virtual-company/worker:latest
+    command: ["node", "dist/migrate.js"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [backend]
+    restart: "no"
+
+  web:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    image: virtual-company/web:latest
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_TRUST_HOST: "true"
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    networks: [frontend, backend]
+
+  worker:
+    image: virtual-company/worker:latest
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+      WORKER_HEALTH_PORT: "8080"
+      DEMO_PROCESSOR_STEP_MS: ${DEMO_PROCESSOR_STEP_MS:-1500}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    stop_grace_period: 60s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    networks: [backend]
+
+  # Daily logical backups (pg_dump, 14 days retention). Enable with: docker compose --profile backup up -d
+  backup:
+    image: postgres:16-alpine
+    profiles: [backup]
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c", "while true; do DATABASE_URL=postgres://vc@postgres:5432/virtual_company /bin/sh /usr/local/bin/backup.sh /backups; sleep 86400; done"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [backend]
+
+networks:
+  frontend: {}
+  # Postgres and Redis are only reachable from inside this network (no published ports).
+  backend:
+    internal: true
+
+volumes:
+  pg-data: {}
+  redis-data: {}

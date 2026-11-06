@@ -1,0 +1,24 @@
+# Local development infrastructure only (run the apps with `pnpm dev`).
+#   docker compose -f docker-compose.dev.yml up -d
+name: virtual-company-dev
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vc
+      POSTGRES_PASSWORD: vc_dev_password
+      POSTGRES_DB: virtual_company
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pg-dev:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vc -d virtual_company"]
+      interval: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:6379:6379"]
+volumes:
+  pg-dev: {}

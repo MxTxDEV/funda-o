@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vc
+          POSTGRES_PASSWORD: vc_dev_password
+          POSTGRES_DB: virtual_company
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vc" --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://vc:vc_dev_password@localhost:5432/virtual_company
+      TEST_DATABASE_URL: postgres://vc:vc_dev_password@localhost:5432/virtual_company_test
+      REDIS_URL: redis://localhost:6379
+      TEST_REDIS_URL: redis://localhost:6379/1
+      AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      ADMIN_EMAIL: ci-admin@example.com
+      ADMIN_PASSWORD: Ci-Admin-Password-2026!
+      DEMO_PROCESSOR_STEP_MS: "200"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create test database
+        run: PGPASSWORD=vc_dev_password psql -h localhost -U vc -d virtual_company -c "CREATE DATABASE virtual_company_test"
+      - name: Migrate
+        run: |
+          pnpm db:migrate
+          DATABASE_URL=$TEST_DATABASE_URL pnpm db:migrate
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Seed admin
+        run: pnpm db:seed:admin
+      - name: Install Playwright browser
+        run: pnpm --filter @vc/web exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report

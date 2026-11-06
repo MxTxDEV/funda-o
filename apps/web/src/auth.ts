@@ -18,6 +18,17 @@ class Unavailable extends CredentialsSignin {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  logger: {
+    // Failed logins are expected and already written to the audit log; keep other errors structured.
+    error(error) {
+      const type = (error as { type?: string }).type ?? error.name;
+      if (type === "CredentialsSignin") return;
+      logger.error("authjs.error", { type, err: error });
+    },
+    warn(code) {
+      logger.warn("authjs.warn", { code });
+    },
+  },
   providers: [
     Credentials({
       credentials: { email: { type: "email" }, password: { type: "password" } },
