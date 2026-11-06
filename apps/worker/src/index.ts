@@ -12,8 +12,7 @@ import {
 } from "@vc/queue";
 import { Queue, Worker } from "bullmq";
 import { createServer } from "node:http";
-import { reconcile } from "./reconciler";
-import { processTaskJob } from "./run-task";
+import { processTaskJob, reconcile } from "@vc/engine";
 
 for (const key of ["DATABASE_URL", "REDIS_URL"]) {
   if (!process.env[key]) {

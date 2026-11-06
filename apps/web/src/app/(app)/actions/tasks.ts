@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { runAction } from "@/lib/actions";
+import { scheduleDrain } from "@/lib/drain";
 import { formToObject } from "@/lib/utils";
 
 export async function createTaskAction(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -27,6 +28,7 @@ export async function createTaskAction(_prev: ActionState, form: FormData): Prom
     }),
   );
   if (!res.ok) return res;
+  if (res.data.task.status === "queued") scheduleDrain();
   revalidatePath("/tasks");
   revalidatePath("/");
   redirect(`/tasks/${res.data.task.id}`);
@@ -46,6 +48,7 @@ export async function dispatchTaskAction(_prev: ActionState, form: FormData): Pr
   const id = taskId(form);
   const res = await runAction((ctx) => dispatchTask(ctx, id));
   if (!res.ok) return res;
+  scheduleDrain();
   refresh(id);
   return {
     ok: true,

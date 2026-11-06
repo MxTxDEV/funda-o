@@ -42,7 +42,8 @@ Princípios:
 | `@vc/queue` | Conexões ioredis (produtor × worker), fila `tasks`, `jobId` determinístico, métricas, heartbeat do worker |
 | `@vc/core` | `services/*` (departamentos, agentes, tarefas, execuções, aprovações, presença, conversas, dashboard, auditoria, usuários), `auth/*` (papéis, hash scrypt), `validation.ts`, `tools.ts`, `task-types.ts`, `tasks/state-machine.ts`, `ratelimit.ts`, `seed/*` |
 | `apps/web` | UI (App Router), `src/app/(app)/actions/*` (server actions), `src/app/api/v1/*` (REST), `src/lib/{session,actions,api}.ts` (wrappers), Auth.js |
-| `apps/worker` | `run-task.ts` (orquestração de uma execução), `processors/*` (registro por tipo), `reconciler.ts`, `index.ts` (bootstrap, heartbeat, health, shutdown) |
+| `@vc/engine` | `run-task.ts` (orquestração de uma execução), `processors/*` (registro por tipo), `reconciler.ts`, `drain.ts` (modo sob demanda na Vercel) |
+| `apps/worker` | processo dedicado: bootstrap, heartbeat, health, reconciliador agendado, shutdown — usa `@vc/engine` |
 
 `@vc/core/client` exporta apenas o que é seguro para componentes cliente (rótulos, enums, catálogo de
 ferramentas, schemas Zod).

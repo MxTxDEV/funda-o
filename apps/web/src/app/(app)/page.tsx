@@ -19,6 +19,7 @@ import { EmptyState, PageHeader } from "@/components/page-header";
 import { DemoBadge, PRESENCE_COLORS } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isServerlessExecution, scheduleDrain } from "@/lib/drain";
 import { getServiceContext } from "@/lib/session";
 import { formatRelative } from "@/lib/utils";
 
@@ -55,6 +56,8 @@ export default async function DashboardPage() {
   const ctx = await getServiceContext();
   const d = await getDashboard(ctx);
   const activeTasks = (d.tasks.byStatus.queued ?? 0) + (d.tasks.byStatus.in_progress ?? 0) + (d.tasks.byStatus.waiting_approval ?? 0);
+  if (d.queue && d.queue.waiting + d.queue.delayed > 0) scheduleDrain();
+  const serverless = isServerlessExecution();
   const isEmpty = d.departments.total === 0 && d.agents.total === 0 && d.tasks.total === 0;
 
   return (
@@ -146,9 +149,15 @@ export default async function DashboardPage() {
                     <CardDescription>Fila BullMQ e worker</CardDescription>
                   </div>
                   {d.queue ? (
-                    <span className={`inline-flex items-center gap-1.5 text-xs ${d.queue.workerOnline ? "text-success" : "text-danger"}`}>
-                      <Server className="size-3.5" /> Worker {d.queue.workerOnline ? "online" : "offline"}
-                    </span>
+                    serverless && !d.queue.workerOnline ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-cyan" title="Tarefas são processadas na Vercel quando entram na fila">
+                        <Server className="size-3.5" /> Sob demanda (Vercel)
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center gap-1.5 text-xs ${d.queue.workerOnline ? "text-success" : "text-danger"}`}>
+                        <Server className="size-3.5" /> Worker {d.queue.workerOnline ? "online" : "offline"}
+                      </span>
+                    )
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-xs text-danger">
                       <CircleAlert className="size-3.5" /> Fila indisponível

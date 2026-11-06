@@ -74,7 +74,19 @@ DATABASE_URL=postgres://...direta... ADMIN_EMAIL=voce@empresa.com ADMIN_PASSWORD
 > Use bancos/Redis separados (ou prefixos distintos) para Preview: os previews são públicos por URL
 > e não devem operar sobre dados de produção. Considere ativar *Deployment Protection*.
 
-## 5. Worker
+## 5. Execução das tarefas — dois modos
+
+**Modo sob demanda (padrão deste projeto na Vercel, `EXECUTION_MODE=serverless`).** Não há servidor
+extra: quando uma tarefa entra na fila (criação, envio, aprovação) — ou quando alguém abre uma tarefa
+pendente/o dashboard com fila — a função da Vercel processa a fila em segundo plano (`after()`) até
+esvaziá-la, por até 240 s (`maxDuration = 300`). Um lock no Redis garante um único processador por
+vez. Usa os mesmos processadores, tentativas e idempotência do worker. Indicado para volume baixo
+e não consome comandos do Redis enquanto ocioso.
+
+**Modo worker dedicado** (recomendado para volume alto ou tarefas longas, como as do Central Brain):
+remova `EXECUTION_MODE` e suba o worker abaixo.
+
+### Worker dedicado
 
 Faça deploy da imagem `docker/worker.Dockerfile` (contexto = raiz do repositório) em Railway,
 Render, Fly.io ou uma VPS.

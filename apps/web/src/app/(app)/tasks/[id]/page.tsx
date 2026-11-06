@@ -9,6 +9,7 @@ import { ApprovalStatusBadge, DemoBadge, PriorityBadge, TaskStatusBadge } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { handlePageError } from "@/lib/page-errors";
+import { scheduleDrain } from "@/lib/drain";
 import { getServiceContext } from "@/lib/session";
 import { formatDateTime } from "@/lib/utils";
 import { assignTaskAction, cancelTaskAction, dispatchTaskAction } from "../../actions/tasks";
@@ -28,6 +29,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const task = await getTask(ctx, id).catch(handlePageError);
   const canWrite = can(ctx.actor, "tasks:write");
   const isActive = ACTIVE_STATUSES.includes(task.status);
+  // Resume pending work (retries with backoff, interrupted runs) in serverless mode.
+  if (task.status === "queued" || task.status === "in_progress") scheduleDrain();
   const canAssign = canWrite && (task.status === "pending" || task.status === "failed");
   const agents = canAssign ? await listAgents(ctx, { status: "active" }) : [];
   const typeDef = TASK_TYPES[task.type as keyof typeof TASK_TYPES];

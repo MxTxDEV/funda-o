@@ -144,3 +144,29 @@ describe("BullMQ integration", () => {
     }
   });
 });
+
+describe("serverless drain", () => {
+  it("processes queued work until the queue is empty, one drainer at a time", async () => {
+    const { drainQueue } = await import("../src/drain");
+    const { ctx, agent } = await setup();
+    const { task } = await createTask(ctx, {
+      title: "Via drain",
+      type: "demo.lifecycle",
+      assignedAgentId: agent.id,
+      input: { steps: 1, failTimes: 1 },
+      dispatch: true,
+    });
+    const [first, second] = await Promise.all([
+      drainQueue(db(), { budgetMs: 20_000, pollMs: 200 }),
+      (async () => {
+        await sleep(100);
+        return drainQueue(db(), { budgetMs: 20_000, pollMs: 200 });
+      })(),
+    ]);
+    expect(first.ran).toBe(true);
+    expect(second).toEqual({ ran: false, reason: "locked" });
+    const done = await getTask(ctx, task.id);
+    expect(done.status).toBe("completed");
+    expect(done.events.map((e) => e.type)).toContain("retry_scheduled");
+  });
+});

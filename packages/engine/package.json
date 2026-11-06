@@ -1,0 +1,24 @@
+{
+  "name": "@vc/engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vc/core": "workspace:*",
+    "@vc/db": "workspace:*",
+    "@vc/queue": "workspace:*",
+    "bullmq": "5.81.5",
+    "drizzle-orm": "0.45.4",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

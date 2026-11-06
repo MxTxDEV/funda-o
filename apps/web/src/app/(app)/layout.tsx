@@ -7,6 +7,9 @@ import { UserMenu } from "@/components/shell/user-menu";
 import { requireActor } from "@/lib/session";
 import { signOutAction } from "./actions/auth";
 
+/** Long enough for the serverless task drain (see lib/drain.ts). */
+export const maxDuration = 300;
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await requireActor();
   const [pending] = can(actor, "approvals:read")

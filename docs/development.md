@@ -66,6 +66,6 @@ temporariamente a porta do Postgres).
 ## Adicionando um novo tipo de tarefa
 
 1. Declare o tipo e o schema de entrada em `packages/core/src/task-types.ts`.
-2. Implemente o processador em `apps/worker/src/processors/` e registre em `processors/index.ts`
+2. Implemente o processador em `packages/engine/src/processors/` e registre em `processors/index.ts`
    (o TypeScript exige um processador para cada tipo registrado).
-3. Escreva testes em `apps/worker/test/`.
+3. Escreva testes em `packages/engine/test/`.
