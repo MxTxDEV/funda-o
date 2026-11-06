@@ -9,17 +9,15 @@ import { formToObject } from "@/lib/utils";
 
 export async function createTaskAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   const raw = formToObject(form);
-  // Demo processor parameters come from dedicated form fields.
-  const input = {
-    steps: raw.steps,
-    requireApproval: raw.requireApproval === "on",
-    failTimes: raw.failTimes,
-  };
+  const requireApproval = raw.requireApproval === "on";
+  // Each task type receives only its own parameters.
+  const input =
+    raw.type === "demo.lifecycle" ? { steps: raw.steps, requireApproval, failTimes: raw.failTimes } : { requireApproval };
   const res = await runAction((ctx) =>
     createTask(ctx, {
       title: raw.title as string,
       description: raw.description as string,
-      type: raw.type as "demo.lifecycle",
+      type: raw.type as "demo.lifecycle" | "agent.execute",
       priority: raw.priority as never,
       assignedAgentId: raw.assignedAgentId as string,
       maxAttempts: raw.maxAttempts as never,

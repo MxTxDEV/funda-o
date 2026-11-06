@@ -2,6 +2,10 @@ import {
   AI_CONNECTION_LABELS,
   aiConnectionOf,
   can,
+  getAiFormOptions,
+  getProviderAvailability,
+  listAgentRuns,
+  usageToday,
   getAgent,
   getAgentWorkstation,
   getDepartmentZone,
@@ -11,9 +15,12 @@ import {
   listDepartments,
   TASK_STATUS_LABELS,
 } from "@vc/core";
+import { readAgentAiConfig } from "@vc/ai/catalog";
 import { Archive, History, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
+import { AiSettingsFields } from "@/components/ai-settings-fields";
+import { AgentRunsTable } from "@/components/agent-runs-table";
 import { ActionForm, Field, SubmitButton } from "@/components/forms";
 import { PageHeader } from "@/components/page-header";
 import { AgentStatusBadge, DemoBadge, PresenceBadge, TaskStatusBadge } from "@/components/status";
@@ -36,14 +43,19 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   const ctx = await getServiceContext();
   const agent = await getAgent(ctx, id).catch(handlePageError);
   const canWrite = can(ctx.actor, "agents:write");
-  const [departments, colleagues, workstation] = await Promise.all([
+  const [departments, colleagues, workstation, availability, aiOptions, runs, usage] = await Promise.all([
     canWrite ? listDepartments(ctx, { activeOnly: true }) : Promise.resolve([]),
     canWrite ? listAgents(ctx) : Promise.resolve([]),
     getAgentWorkstation(ctx, agent.id),
+    getProviderAvailability(ctx.db),
+    canWrite ? getAiFormOptions(ctx.db) : Promise.resolve({ modelOptions: {}, configured: {} }),
+    listAgentRuns(ctx, { agentId: agent.id, limit: 10 }),
+    usageToday(ctx.db, { agentId: agent.id }),
   ]);
   const managers = colleagues.filter((c) => c.id !== agent.id && c.hierarchyLevel !== "specialist");
-  const ai = aiConnectionOf(agent.currentVersion?.aiProvider, agent.currentVersion?.aiModel);
+  const ai = aiConnectionOf(agent.currentVersion?.aiProvider, agent.currentVersion?.aiModel, availability);
   const current = agent.currentVersion;
+  const aiConfig = readAgentAiConfig(current?.config);
 
   const statusButton = (status: "active" | "paused" | "archived", label: string, icon: React.ReactNode, confirm?: string) => (
     <ActionForm action={setAgentStatusAction} confirm={confirm}>
@@ -127,7 +139,15 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Modelo de IA</p>
                   <p>{agent.currentVersion?.aiProvider ? `${agent.currentVersion.aiProvider} · ${agent.currentVersion.aiModel ?? "—"}` : "Não configurado"}</p>
-                  <p className="text-xs text-warning">{AI_CONNECTION_LABELS[ai]}</p>
+                  <p className={ai === "ready" ? "text-xs text-success" : "text-xs text-warning"}>{AI_CONNECTION_LABELS[ai]}</p>
+                  {current?.aiProvider && (
+                    <p className="text-xs text-muted-foreground">
+                      Saída máx. {aiConfig.maxOutputTokens} tokens
+                      {aiConfig.temperature !== undefined ? ` · temperatura ${aiConfig.temperature}` : ""}
+                      {aiConfig.dailyTokenLimit ? ` · limite diário ${aiConfig.dailyTokenLimit} tokens` : ""}
+                      {aiConfig.dailyCostLimitUsd !== undefined ? ` · limite diário US$ ${aiConfig.dailyCostLimitUsd}` : ""}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Estação de trabalho</p>
@@ -204,14 +224,13 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                   <Field label="Ferramentas autorizadas" name="allowedTools">
                     <ToolPicker selected={current?.allowedTools ?? []} />
                   </Field>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Provedor de IA (opcional)" name="aiProvider" hint="Nenhuma integração de IA está ativa nesta fase.">
-                      <Input id="aiProvider" name="aiProvider" defaultValue={current?.aiProvider ?? ""} maxLength={80} placeholder="ex.: anthropic" />
-                    </Field>
-                    <Field label="Modelo de IA (opcional)" name="aiModel">
-                      <Input id="aiModel" name="aiModel" defaultValue={current?.aiModel ?? ""} maxLength={80} />
-                    </Field>
-                  </div>
+                  <AiSettingsFields
+                    provider={current?.aiProvider}
+                    model={current?.aiModel}
+                    config={aiConfig}
+                    modelOptions={aiOptions.modelOptions}
+                    configured={aiOptions.configured}
+                  />
                   <Field label="Nota da alteração" name="changeNote">
                     <Input id="changeNote" name="changeNote" required minLength={3} maxLength={500} placeholder="O que mudou e por quê" />
                   </Field>
@@ -220,6 +239,22 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Execuções de IA</CardTitle>
+                <CardDescription>
+                  Hoje: {usage.runs} execução(ões) · {usage.tokens.toLocaleString("pt-BR")} tokens
+                  {usage.costUsd > 0 ? ` · US$ ${usage.costUsd.toFixed(4)}` : ""}
+                  {usage.unpricedRuns > 0 ? ` · ${usage.unpricedRuns} sem preço configurado` : ""}
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <AgentRunsTable runs={runs} showAgent={false} empty="Nenhuma execução de IA registrada para este funcionário." />
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

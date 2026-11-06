@@ -73,7 +73,17 @@ export function EmployeeDetailsPanel({
               ? `${getDepartmentZone(department.zone)?.label} · mesa ${agent.deskIndex + 1}`
               : "Sem sala no escritório"}
         </p>
-        <p className="text-xs text-warning">{AI_CONNECTION_LABELS[agent.aiConnection]}</p>
+        <p className={agent.aiConnection === "ready" ? "text-xs text-success" : "text-xs text-warning"}>{AI_CONNECTION_LABELS[agent.aiConnection]}</p>
+        {agent.aiModel && (
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {agent.aiProvider}/{agent.aiModel}
+          </p>
+        )}
+        {agent.activeRun && (
+          <p className="mt-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs text-[#9dbbff]" data-testid="active-run">
+            Executando agora com {agent.activeRun.model} desde {formatDateTime(agent.activeRun.startedAt)}
+          </p>
+        )}
         <p className="text-[11px] text-muted-foreground">Cadastrado em {formatDateTime(agent.createdAt)}</p>
       </Section>
 

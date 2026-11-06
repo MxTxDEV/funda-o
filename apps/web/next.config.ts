@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   // Docker images use the standalone server; Vercel ignores this setting.
   output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
-  transpilePackages: ["@vc/core", "@vc/db", "@vc/engine", "@vc/queue"],
+  transpilePackages: ["@vc/ai", "@vc/core", "@vc/db", "@vc/engine", "@vc/queue"],
   serverExternalPackages: ["bullmq", "ioredis", "postgres"],
   poweredByHeader: false,
   async headers() {

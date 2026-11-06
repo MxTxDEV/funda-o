@@ -1,6 +1,8 @@
 import type { ApprovalRequest, RunContext } from "@vc/core";
+import type { Database } from "@vc/db";
 
 export type ProcessorContext = RunContext & {
+  db: Database;
   /** Total attempts made for this task (including the current one). */
   attempt: number;
   progress: (message: string, data?: Record<string, unknown>) => Promise<void>;

@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vc/ai": "workspace:*",
     "@vc/core": "workspace:*",
     "@vc/db": "workspace:*",
     "@vc/queue": "workspace:*",

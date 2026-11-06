@@ -1,4 +1,5 @@
-import { assertCan, listAgents, listDepartments } from "@vc/core";
+import { assertCan, getAiFormOptions, listAgents, listDepartments } from "@vc/core";
+import { AiSettingsFields } from "@/components/ai-settings-fields";
 import Link from "next/link";
 import { ActionForm, Field, SubmitButton } from "@/components/forms";
 import { EmptyState, PageHeader } from "@/components/page-header";
@@ -15,7 +16,7 @@ export default async function NewAgentPage({ searchParams }: { searchParams: Pro
   const { departmentId } = await searchParams;
   const ctx = await getServiceContext();
   assertCan(ctx.actor, "agents:write");
-  const [departments, colleagues] = await Promise.all([listDepartments(ctx, { activeOnly: true }), listAgents(ctx)]);
+  const [departments, colleagues, aiOptions] = await Promise.all([listDepartments(ctx, { activeOnly: true }), listAgents(ctx), getAiFormOptions(ctx.db)]);
   const managers = colleagues.filter((c) => c.hierarchyLevel !== "specialist");
 
   if (departments.length === 0) {
@@ -112,14 +113,7 @@ export default async function NewAgentPage({ searchParams }: { searchParams: Pro
             <Field label="Ferramentas autorizadas" name="allowedTools">
               <ToolPicker />
             </Field>
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Provedor de IA (opcional)" name="aiProvider" hint="Nenhuma integração de IA está ativa nesta fase.">
-                <Input id="aiProvider" name="aiProvider" maxLength={80} />
-              </Field>
-              <Field label="Modelo de IA (opcional)" name="aiModel">
-                <Input id="aiModel" name="aiModel" maxLength={80} />
-              </Field>
-            </div>
+            <AiSettingsFields modelOptions={aiOptions.modelOptions} configured={aiOptions.configured} />
             <input type="hidden" name="changeNote" value="Versão inicial" />
             <SubmitButton className="w-full">Cadastrar funcionário</SubmitButton>
           </CardContent>

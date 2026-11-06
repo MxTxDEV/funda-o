@@ -1,7 +1,8 @@
-import { ACTIVE_STATUSES, CANCELLABLE_STATUSES, can, getTask, listAgents, TASK_EVENT_LABELS, TASK_TYPES } from "@vc/core";
+import { ACTIVE_STATUSES, CANCELLABLE_STATUSES, can, getTask, listAgentRuns, listAgents, TASK_EVENT_LABELS, TASK_TYPES } from "@vc/core";
 import { Ban, Play, RotateCcw, UserRoundCog } from "lucide-react";
 import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
+import { AgentRunsTable, formatCost, formatTokens } from "@/components/agent-runs-table";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { PageHeader } from "@/components/page-header";
@@ -23,6 +24,17 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+type AgentOutput = {
+  output: string;
+  truncated?: boolean;
+  provider?: string;
+  model?: string;
+  costUsd?: number | null;
+  usage?: { inputTokens: number; outputTokens: number } | null;
+  agent?: { name: string; version: number };
+  notice?: string;
+};
+
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getServiceContext();
@@ -34,6 +46,9 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const canAssign = canWrite && (task.status === "pending" || task.status === "failed");
   const agents = canAssign ? await listAgents(ctx, { status: "active" }) : [];
   const typeDef = TASK_TYPES[task.type as keyof typeof TASK_TYPES];
+  const isAi = task.type === "agent.execute";
+  const runs = isAi ? await listAgentRuns(ctx, { taskId: task.id, limit: 50 }) : [];
+  const aiResult = isAi && task.result?.kind === "agent_output" ? (task.result as AgentOutput) : null;
 
   return (
     <>
@@ -92,7 +107,42 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             </CardContent>
           </Card>
 
-          {(task.result || task.error) && (
+          {aiResult && (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Resultado de {aiResult.agent?.name ?? "funcionário"}</CardTitle>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {aiResult.provider}/{aiResult.model} · versão v{aiResult.agent?.version ?? "—"} · tokens {formatTokens(aiResult.usage?.inputTokens ?? null, aiResult.usage?.outputTokens ?? null)} · {formatCost(aiResult.costUsd ?? null)}
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {aiResult.truncated && (
+                  <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                    A resposta foi cortada pelo limite de tokens de saída configurado para o funcionário.
+                  </p>
+                )}
+                <div className="max-h-[36rem] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-background/60 p-4 text-sm leading-relaxed" data-testid="ai-output">
+                  {aiResult.output}
+                </div>
+                <p className="text-xs text-muted-foreground">{aiResult.notice}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {isAi && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Execuções de IA</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <AgentRunsTable runs={runs} showTask={false} empty="O modelo ainda não foi chamado para esta tarefa." />
+              </CardContent>
+            </Card>
+          )}
+
+          {!aiResult && (task.result || task.error) && (
             <Card>
               <CardHeader>
                 <CardTitle>{task.error && task.status !== "completed" ? "Erro" : "Resultado"}</CardTitle>

@@ -55,8 +55,9 @@ test("full foundation flow: department → agent → task → worker → approva
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Nova tarefa");
   await page.getByLabel("Título").fill(`Tarefa E2E ${suffix}`);
   await page.getByLabel("Responsável", { exact: true }).selectOption({ label: `Agente ${suffix} · Copywriter` });
+  await page.getByLabel("Tipo").selectOption("demo.lifecycle");
   await page.getByLabel("Etapas simuladas").fill("2");
-  await page.getByText("Exigir aprovação humana do resultado").click();
+  await page.getByText("Exigir minha aprovação do resultado").click();
   await page.getByRole("button", { name: "Criar tarefa" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(`Tarefa E2E ${suffix}`);
 

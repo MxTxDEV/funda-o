@@ -17,6 +17,8 @@ export const approvals = pgTable(
     title: text("title").notNull(),
     summary: text("summary").notNull().default(""),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    /** sha256 of the exact content being approved. A different content requires a new approval. */
+    contentHash: text("content_hash"),
     status: approvalStatusEnum("status").notNull().default("pending"),
     requestedByType: actorTypeEnum("requested_by_type").notNull(),
     requestedByUserId: uuid("requested_by_user_id").references(() => users.id, { onDelete: "set null" }),

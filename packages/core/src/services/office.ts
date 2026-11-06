@@ -25,6 +25,8 @@ import {
   aiConnectionOf,
 } from "../office";
 import { idSchema } from "../validation";
+import { getRunningAgentRuns } from "./agent-runs";
+import { getProviderAvailability } from "./ai";
 
 /**
  * Everything the 3D office renders, computed from the operational tables (single source of truth).
@@ -99,6 +101,9 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
       : Promise.resolve([]),
   ]);
 
+  const [availability, runningRuns] = await Promise.all([getProviderAvailability(db), getRunningAgentRuns(db)]);
+  const runByAgent = new Map(runningRuns.filter((r) => r.agentId).map((r) => [r.agentId!, r]));
+
   const { placement, unplaced } = resolveDepartmentZones(deptRows, new Map(zoneRows.map((z) => [z.departmentId, z.zone])));
 
   const tasksByAgent = new Map<string, typeof activeTasks>();
@@ -140,7 +145,12 @@ export async function getOfficeSnapshot(ctx: ServiceContext) {
       appearance: agent.appearance,
       aiProvider: aiProvider ?? null,
       aiModel: aiModel ?? null,
-      aiConnection: aiConnectionOf(aiProvider, aiModel),
+      aiConnection: aiConnectionOf(aiProvider, aiModel, availability),
+      /** Model call actually in progress for this employee (null when not executing). */
+      activeRun: (() => {
+        const r = runByAgent.get(agent.id);
+        return r ? { provider: r.provider, model: r.model, startedAt: r.startedAt.toISOString(), taskId: r.taskId } : null;
+      })(),
       createdAt: agent.createdAt.toISOString(),
       avatarSeed: agent.avatarSeed,
       avatarUrl: agent.avatarUrl,

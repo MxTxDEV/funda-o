@@ -20,6 +20,7 @@
     "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.2",
     "@react-three/postprocessing": "3.2.1",
+    "@vc/ai": "workspace:*",
     "@vc/core": "workspace:*",
     "@vc/db": "workspace:*",
     "@vc/engine": "workspace:*",

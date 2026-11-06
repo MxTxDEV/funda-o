@@ -33,6 +33,9 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : [
+        ...(process.env.E2E_MOCK_AI
+          ? [{ command: "node e2e/mock-ai-server.mjs", url: "http://127.0.0.1:8090/health", reuseExistingServer: true, timeout: 30_000 }]
+          : []),
         { command: "pnpm start", url: `${baseURL}/api/health`, reuseExistingServer: true, timeout: 120_000 },
         {
           // The worker exposes its own liveness endpoint so Playwright knows it is really running.

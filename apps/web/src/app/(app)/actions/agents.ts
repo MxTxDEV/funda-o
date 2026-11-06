@@ -6,8 +6,21 @@ import type { ActionState } from "@/lib/action-state";
 import { runAction } from "@/lib/actions";
 import { formToObject } from "@/lib/utils";
 
+/** Moves the ai_* form fields into the aiSettings object expected by the services. */
+function withAiSettings(values: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  const aiSettings: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(values)) {
+    if (k.startsWith("ai_")) aiSettings[k.slice(3)] = v;
+    else out[k] = v;
+  }
+  if (out.aiProvider) out.aiSettings = aiSettings;
+  else out.aiModel = "";
+  return out;
+}
+
 export async function createAgentAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const res = await runAction((ctx) => createAgent(ctx, formToObject(form, ["allowedTools"]) as never));
+  const res = await runAction((ctx) => createAgent(ctx, withAiSettings(formToObject(form, ["allowedTools"])) as never));
   if (!res.ok) return res;
   revalidatePath("/agents");
   redirect(`/agents/${res.data.id}`);
@@ -24,7 +37,7 @@ export async function updateAgentAction(_prev: ActionState, form: FormData): Pro
 
 export async function createAgentVersionAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   const { id, ...rest } = formToObject(form, ["allowedTools"]);
-  const res = await runAction((ctx) => createAgentVersion(ctx, String(id), rest as never));
+  const res = await runAction((ctx) => createAgentVersion(ctx, String(id), withAiSettings(rest) as never));
   if (!res.ok) return res;
   revalidatePath(`/agents/${id}`);
   return { ok: true, message: `Versão ${res.data.version} criada e ativada.` };

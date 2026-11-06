@@ -15,6 +15,7 @@ import {
   agentVersionCreateSchema,
   idSchema,
 } from "../validation";
+import { assertModelAvailable } from "./ai";
 import { syncAgentPresence } from "./presence";
 
 export async function listAgents(
@@ -131,6 +132,7 @@ export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, op
       .returning();
     if (!agent) throw new Error("insert failed");
 
+    await assertModelAvailable(tx, input.aiProvider, input.aiModel);
     const [version] = await tx
       .insert(agentVersions)
       .values({
@@ -140,6 +142,7 @@ export async function createAgent(ctx: ServiceContext, raw: AgentCreateInput, op
         allowedTools: input.allowedTools,
         aiProvider: input.aiProvider,
         aiModel: input.aiModel,
+        config: input.aiSettings ?? {},
         changeNote: input.changeNote,
         createdById: userId,
       })
@@ -248,6 +251,7 @@ export async function createAgentVersion(ctx: ServiceContext, id: string, raw: A
     const [agent] = await tx.select().from(agents).where(eq(agents.id, agentId)).for("update");
     if (!agent) throw notFound("Funcionário");
     if (agent.status === "archived") throw new AppError("INVALID_STATE", "Funcionário arquivado.");
+    await assertModelAvailable(tx, input.aiProvider, input.aiModel);
     const [{ latest } = { latest: 0 }] = await tx
       .select({ latest: max(agentVersions.version) })
       .from(agentVersions)
@@ -262,6 +266,7 @@ export async function createAgentVersion(ctx: ServiceContext, id: string, raw: A
         allowedTools: input.allowedTools,
         aiProvider: input.aiProvider,
         aiModel: input.aiModel,
+        config: input.aiSettings ?? {},
         changeNote: input.changeNote,
         createdById: ctx.actor.type === "user" ? ctx.actor.userId : null,
       })
@@ -274,7 +279,14 @@ export async function createAgentVersion(ctx: ServiceContext, id: string, raw: A
         action: "agent.version_create",
         entityType: "agent",
         entityId: agentId,
-        changes: { version: nextVersion, allowedTools: input.allowedTools, changeNote: input.changeNote },
+        changes: {
+          version: nextVersion,
+          allowedTools: input.allowedTools,
+          aiProvider: input.aiProvider,
+          aiModel: input.aiModel,
+          aiSettings: input.aiSettings ?? {},
+          changeNote: input.changeNote,
+        },
       },
       ctx.meta,
     );

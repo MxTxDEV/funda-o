@@ -3,6 +3,7 @@ import {
   Box,
   Building2,
   CheckCheck,
+  Cpu,
   LayoutDashboard,
   ListTodo,
   MessagesSquare,
@@ -21,6 +22,7 @@ const ITEMS = [
   { href: "/tasks", label: "Tarefas", icon: ListTodo },
   { href: "/approvals", label: "Aprovações", icon: CheckCheck, badgeKey: "approvals" as const },
   { href: "/conversations", label: "Conversas", icon: MessagesSquare },
+  { href: "/ai", label: "IA e execuções", icon: Cpu },
   { href: "/audit", label: "Auditoria", icon: ScrollText, permission: "audit" as const },
 ];
 

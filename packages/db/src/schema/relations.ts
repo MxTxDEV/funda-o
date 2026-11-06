@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm";
+import { agentRuns } from "./ai";
 import { agentVersions, agents } from "./agents";
 import { approvals } from "./approvals";
 import { conversations, messages } from "./conversations";
@@ -28,6 +29,13 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   department: one(departments, { fields: [tasks.departmentId], references: [departments.id] }),
   events: many(taskEvents),
   approvals: many(approvals),
+  agentRuns: many(agentRuns),
+}));
+
+export const agentRunsRelations = relations(agentRuns, ({ one }) => ({
+  task: one(tasks, { fields: [agentRuns.taskId], references: [tasks.id] }),
+  agent: one(agents, { fields: [agentRuns.agentId], references: [agents.id] }),
+  agentVersion: one(agentVersions, { fields: [agentRuns.agentVersionId], references: [agentVersions.id] }),
 }));
 
 export const taskEventsRelations = relations(taskEvents, ({ one }) => ({

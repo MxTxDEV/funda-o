@@ -1,4 +1,4 @@
-import { AI_CONNECTION_LABELS, aiConnectionOf, can, HIERARCHY_LABELS, initialTeamStatus, listAgents } from "@vc/core";
+import { AI_CONNECTION_LABELS, aiConnectionOf, can, getProviderAvailability, HIERARCHY_LABELS, initialTeamStatus, listAgents } from "@vc/core";
 import { Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { AgentAvatar } from "@/components/agent-avatar";
@@ -21,6 +21,7 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
   const canSeed = canWrite && can(ctx.actor, "departments:write");
   const team = canSeed ? await initialTeamStatus(ctx) : null;
   const visible = agents.filter((a) => a.status !== "archived");
+  const availability = await getProviderAvailability(ctx.db);
 
   return (
     <>
@@ -66,9 +67,14 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
                 <p className="mt-3 line-clamp-2 min-h-8 text-xs text-muted-foreground">{a.specialty}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <Badge tone={a.hierarchyLevel === "specialist" ? "neutral" : "blue"}>{HIERARCHY_LABELS[a.hierarchyLevel]}</Badge>
-                  <Badge tone="neutral" title={AI_CONNECTION_LABELS[aiConnectionOf(a.currentVersion?.aiProvider, a.currentVersion?.aiModel)]}>
-                    IA: {a.currentVersion?.aiModel ? "configurada (não conectada)" : "não configurada"}
-                  </Badge>
+                  {(() => {
+                    const c = aiConnectionOf(a.currentVersion?.aiProvider, a.currentVersion?.aiModel, availability);
+                    return (
+                      <Badge tone={c === "ready" ? "green" : c === "not_configured" ? "neutral" : "amber"} title={AI_CONNECTION_LABELS[c]}>
+                        IA: {c === "ready" ? a.currentVersion?.aiModel : c === "not_configured" ? "não configurada" : "sem conexão"}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <AgentStatusBadge status={a.status} />

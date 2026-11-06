@@ -6,6 +6,7 @@ import {
   TASK_PRIORITIES,
   TASK_STATUSES,
 } from "@vc/db/values";
+import { AI_PROVIDER_IDS, agentAiConfigSchema } from "@vc/ai/catalog";
 import { z } from "zod";
 import { TASK_TYPE_IDS } from "./task-types";
 import { isKnownTool } from "./tools";
@@ -96,12 +97,45 @@ export const appearanceSchema = z
   })
   .strict();
 
-const aiField = z
-  .string()
-  .trim()
-  .max(80)
+const aiProviderField = z
+  .union([z.literal(""), z.enum(AI_PROVIDER_IDS, { message: "Provedor de IA inválido" })])
+  .nullable()
   .optional()
   .transform((v) => v || null);
+/** Model identifiers are validated against the provider's own model list in the service layer. */
+const aiModelField = z
+  .string()
+  .trim()
+  .max(120)
+  .regex(/^[A-Za-z0-9._:\/-]*$/, "Identificador de modelo inválido")
+  .nullable()
+  .optional()
+  .transform((v) => v || null);
+
+/** Optional numeric form field ("" = not set). */
+const optionalNumber = z
+  .union([z.literal(""), z.null(), z.coerce.number()])
+  .optional()
+  .transform((v) => (v === "" || v === null || v === undefined ? undefined : v));
+
+/** AI execution settings as sent by forms/API; stored in agent_versions.config. */
+export const aiSettingsSchema = z
+  .object({
+    temperature: optionalNumber,
+    maxOutputTokens: optionalNumber,
+    dailyTokenLimit: optionalNumber,
+    dailyCostLimitUsd: optionalNumber,
+  })
+  .transform((v) => Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined)))
+  .pipe(agentAiConfigSchema);
+
+const aiSelection = {
+  aiProvider: aiProviderField,
+  aiModel: aiModelField,
+  aiSettings: aiSettingsSchema.optional(),
+};
+const aiPairCheck = (v: { aiProvider: string | null; aiModel: string | null }) => !!v.aiProvider === !!v.aiModel;
+const aiPairMessage = { message: "Informe provedor e modelo juntos (ou nenhum dos dois)", path: ["aiModel"] };
 
 const profileExtras = {
   specialties: itemList(12),
@@ -130,13 +164,12 @@ const agentProfile = {
 export const agentCreateSchema = z.object({
   ...agentProfile,
   ...profileExtras,
-  aiProvider: aiField,
-  aiModel: aiField,
+  ...aiSelection,
   status: z.enum(AGENT_STATUSES).default("active"),
   instructions: z.string().trim().min(10, "Descreva as instruções (mínimo 10 caracteres)").max(20000),
   allowedTools: toolList.default([]),
   changeNote: z.string().trim().max(500).default("Versão inicial"),
-});
+}).refine(aiPairCheck, aiPairMessage);
 export type AgentCreateInput = z.input<typeof agentCreateSchema>;
 
 export const agentUpdateSchema = z.object({
@@ -159,10 +192,9 @@ export const agentStatusSchema = z.object({ status: z.enum(AGENT_STATUSES) });
 export const agentVersionCreateSchema = z.object({
   instructions: z.string().trim().min(10).max(20000),
   allowedTools: toolList.default([]),
-  aiProvider: aiField,
-  aiModel: aiField,
+  ...aiSelection,
   changeNote: z.string().trim().min(3, "Descreva a alteração").max(500),
-});
+}).refine(aiPairCheck, aiPairMessage);
 export type AgentVersionCreateInput = z.input<typeof agentVersionCreateSchema>;
 
 // ---------- Tasks ----------

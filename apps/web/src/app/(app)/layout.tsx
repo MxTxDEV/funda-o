@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="rounded-md border border-border bg-surface-2/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <span className="font-semibold text-foreground">FOUNDATION v1.0</span>
             <br />
-            Central Brain e escritório 3D: próximas fases.
+            Central Brain v1: execução real por IA. Memória, ferramentas e delegação: próximas fases.
           </div>
           <UserMenu name={actor.name} email={actor.email} roleLabel={ROLE_LABELS[actor.role]} signOutAction={signOutAction} />
         </div>

@@ -17,6 +17,7 @@
     "db:seed:team": "tsx src/seed/team.ts"
   },
   "dependencies": {
+    "@vc/ai": "workspace:*",
     "@vc/db": "workspace:*",
     "@vc/queue": "workspace:*",
     "drizzle-orm": "0.45.4",

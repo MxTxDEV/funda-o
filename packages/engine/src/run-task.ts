@@ -42,6 +42,7 @@ export async function processTaskJob(
 
     const outcome = await processor({
       ...run,
+      db,
       attempt: run.task.attempts,
       progress: (message, data) => recordRunProgress(db, ref, message, data),
       isAborted: () => isRunAborted(db, ref),

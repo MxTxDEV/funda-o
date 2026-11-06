@@ -1,4 +1,4 @@
-import { getDashboard, PRESENCE_LABELS, PRESENCE_STATES, TASK_EVENT_LABELS, TASK_STATUS_LABELS, TASK_STATUSES } from "@vc/core";
+import { getAiActivity, getDashboard, PRESENCE_LABELS, PRESENCE_STATES, TASK_EVENT_LABELS, TASK_STATUS_LABELS, TASK_STATUSES } from "@vc/core";
 import {
   Activity,
   ArrowRight,
@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { AgentRunsTable } from "@/components/agent-runs-table";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { OfficeFloor } from "@/components/office-floor";
 import { EmptyState, PageHeader } from "@/components/page-header";
@@ -54,7 +55,7 @@ function Kpi({ icon, label, value, hint, href }: { icon: React.ReactNode; label:
 
 export default async function DashboardPage() {
   const ctx = await getServiceContext();
-  const d = await getDashboard(ctx);
+  const [d, ai] = await Promise.all([getDashboard(ctx), getAiActivity(ctx)]);
   const activeTasks = (d.tasks.byStatus.queued ?? 0) + (d.tasks.byStatus.in_progress ?? 0) + (d.tasks.byStatus.waiting_approval ?? 0);
   if (d.queue && d.queue.waiting + d.queue.delayed > 0) scheduleDrain();
   const serverless = isServerlessExecution();
@@ -121,7 +122,7 @@ export default async function DashboardPage() {
               <CardHeader>
                 <div>
                   <CardTitle>Escritório</CardTitle>
-                  <CardDescription>Presença sincronizada com as tarefas. Visual 2D provisório — o escritório 3D virá em fase futura.</CardDescription>
+                  <CardDescription>Presença sincronizada com a execução real das tarefas. Veja também o Escritório Virtual 3D.</CardDescription>
                 </div>
                 <div className="hidden flex-wrap justify-end gap-3 md:flex">
                   {PRESENCE_STATES.map((s) => (
@@ -142,6 +143,35 @@ export default async function DashboardPage() {
             </Card>
 
             <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle>Inteligência artificial — hoje</CardTitle>
+                    <CardDescription>Chamadas reais aos modelos</CardDescription>
+                  </div>
+                  <Link href="/ai" className="text-xs text-primary hover:underline">
+                    Detalhes
+                  </Link>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3 text-center text-xs" data-testid="ai-today">
+                  <div>
+                    <p className="text-lg font-semibold tabular-nums">{ai.running}</p>
+                    <p className="text-muted-foreground">Em execução</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold tabular-nums">{ai.today.runs}</p>
+                    <p className="text-muted-foreground">Execuções ({ai.today.failed} com falha)</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold tabular-nums">{ai.today.tokens.toLocaleString("pt-BR")}</p>
+                    <p className="text-muted-foreground">Tokens</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold tabular-nums">{ai.today.costUsd > 0 ? `US$ ${ai.today.costUsd.toFixed(4)}` : "—"}</p>
+                    <p className="text-muted-foreground">{ai.today.unpricedRuns > 0 ? `Custo est. (${ai.today.unpricedRuns} sem preço)` : "Custo estimado"}</p>
+                  </div>
+                </CardContent>
+              </Card>
               <Card>
                 <CardHeader>
                   <div>
@@ -213,6 +243,20 @@ export default async function DashboardPage() {
               </Card>
             </div>
           </div>
+
+          {ai.recent.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Últimas execuções de IA</CardTitle>
+                  <CardDescription>Modelo, tokens, custo estimado, duração e erros de cada chamada</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <AgentRunsTable runs={ai.recent} empty="" />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

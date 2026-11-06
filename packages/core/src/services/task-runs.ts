@@ -5,6 +5,7 @@
 import { type Agent, type AgentVersion, type Approval, agents, agentVersions, approvals, type Database, type Task, tasks } from "@vc/db";
 import { and, eq, lt } from "drizzle-orm";
 import { writeAudit } from "../audit";
+import { contentHash } from "../hash";
 import { WORKER_ACTOR } from "../auth/permissions";
 import type { TaskError } from "@vc/db";
 import { applyTransition, lockTask, recordTaskEvent } from "./tasks";
@@ -154,6 +155,7 @@ export async function requestTaskApproval(
             title: request.title,
             summary: request.summary ?? "",
             payload: request.payload ?? {},
+            contentHash: contentHash(request.payload ?? {}),
             requestedByType: "worker",
           })
           .returning({ id: approvals.id })
@@ -175,6 +177,14 @@ export async function requestTaskApproval(
     });
     return "applied";
   });
+}
+
+/**
+ * True when an approval was granted for exactly this content. Approving is bound to the content hash:
+ * if the content changed after the decision, a new approval is required.
+ */
+export function approvalCoversContent(approval: Pick<Approval, "status" | "contentHash">, payload: Record<string, unknown>) {
+  return approval.status === "approved" && !!approval.contentHash && approval.contentHash === contentHash(payload);
 }
 
 /**

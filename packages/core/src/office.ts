@@ -55,15 +55,7 @@ export function matchZoneByName(name: string): DepartmentZoneKey | null {
   return null;
 }
 
-/** AI connection of an employee. No AI provider integration exists in this phase, so nobody is "connected". */
-export type AiConnection = "not_configured" | "configured_not_connected";
-export function aiConnectionOf(provider: string | null | undefined, model: string | null | undefined): AiConnection {
-  return provider && model ? "configured_not_connected" : "not_configured";
-}
-export const AI_CONNECTION_LABELS: Record<AiConnection, string> = {
-  not_configured: "IA não configurada — aguardando configuração",
-  configured_not_connected: "Modelo configurado — aguardando integração do Central Brain",
-};
+export { AI_CONNECTION_LABELS, type AiConnection, aiConnectionOf } from "@vc/ai/catalog";
 
 /**
  * Places departments in rooms: explicit assignments first, then name matching, then free rooms in
