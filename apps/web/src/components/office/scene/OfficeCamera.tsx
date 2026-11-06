@@ -6,8 +6,8 @@ import * as THREE from "three";
 import { focusPoint, type OfficeLayout } from "../layout";
 import { useOfficeStore } from "../store";
 
-export const INITIAL_POSITION = new THREE.Vector3(27, 33, 39);
-export const INITIAL_TARGET = new THREE.Vector3(1, 0, 2.5);
+export const INITIAL_POSITION = new THREE.Vector3(30, 34, 42);
+export const INITIAL_TARGET = new THREE.Vector3(1, 0, 1.5);
 
 /**
  * Orbit/pan/zoom controls plus smooth "fly-to" animations driven by camera commands
@@ -19,6 +19,8 @@ export function OfficeCamera({ layout }: { layout: OfficeLayout }) {
   const goal = useRef<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const command = useOfficeStore((s) => s.command);
   const selection = useOfficeStore((s) => s.selection);
+  const panorama = useOfficeStore((s) => s.panorama);
+  const setPanorama = useOfficeStore((s) => s.setPanorama);
 
   useEffect(() => {
     const c = controls.current;
@@ -81,9 +83,18 @@ export function OfficeCamera({ layout }: { layout: OfficeLayout }) {
       dampingFactor={0.08}
       minDistance={5}
       maxDistance={75}
-      maxPolarAngle={Math.PI / 2.25}
+      maxPolarAngle={Math.PI / 2.3}
+      minPolarAngle={0.25}
       screenSpacePanning={false}
-      onStart={() => (goal.current = null)}
+      autoRotate={panorama}
+      autoRotateSpeed={0.35}
+      zoomSpeed={0.7}
+      rotateSpeed={0.6}
+      panSpeed={0.8}
+      onStart={() => {
+        goal.current = null;
+        if (panorama) setPanorama(false);
+      }}
     />
   );
 }

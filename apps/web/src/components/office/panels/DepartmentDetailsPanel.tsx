@@ -96,6 +96,11 @@ export function DepartmentDetailsPanel({
             </ul>
           </Section>
         )}
+        {zone?.key === "executive" && (
+          <Button asChild className="w-full">
+            <Link href="/approvals?status=pending">Abrir aprovações pendentes</Link>
+          </Button>
+        )}
         {snapshot.permissions.manageDepartments && snapshot.departments.length > 0 ? (
           <Section title="Vincular departamento">
             <ZoneForm mode="assign" zone={zoneKey} departments={snapshot.departments} onSaved={onChanged} />
@@ -179,6 +184,11 @@ export function DepartmentDetailsPanel({
         </Section>
       )}
 
+      {department.zone === "executive" && (
+        <Button asChild className="w-full">
+          <Link href="/approvals?status=pending">Abrir aprovações pendentes</Link>
+        </Button>
+      )}
       <Button asChild variant="secondary" className="w-full">
         <Link href={`/departments/${department.id}`}>
           <ExternalLink /> Abrir página do departamento

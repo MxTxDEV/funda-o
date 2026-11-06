@@ -21,7 +21,7 @@ describe("office layout", () => {
     expect(room.desks[0]!.agentId).toBe("a");
     expect(room.desks[1]!.agentId).toBe("b");
     expect(layout.placements.get("a")?.seat).toBe("desk");
-    expect(layout.rooms.filter((r) => !r.department)).toHaveLength(4);
+    expect(layout.rooms.filter((r) => !r.department)).toHaveLength(5);
   });
 
   it("sends resting employees to the lounge and frees their desk", () => {
@@ -41,7 +41,7 @@ describe("office layout", () => {
 
   it("keeps desks inside the room bounds", () => {
     for (const n of [1, 6, 9, 12]) {
-      for (const [x, , z] of deskPositions(ROOM_CENTERS.design, n)) {
+      for (const { position: [x, , z] } of deskPositions(ROOM_CENTERS.design, n)) {
         expect(Math.abs(x - ROOM_CENTERS.design[0])).toBeLessThan(6);
         expect(Math.abs(z - ROOM_CENTERS.design[2])).toBeLessThan(4.2);
       }

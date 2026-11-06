@@ -1,5 +1,4 @@
 import { getOfficeSnapshot } from "@vc/core";
-import { PageHeader } from "@/components/page-header";
 import { VirtualOffice } from "@/components/office/VirtualOffice";
 import { scheduleDrain } from "@/lib/drain";
 import { getServiceContext } from "@/lib/session";
@@ -15,11 +14,10 @@ export default async function OfficePage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Escritório"
-        title="Escritório Virtual"
-        description="Visão 3D da operação em tempo real. Clique nos funcionários, nas salas e no Central Brain para ver detalhes."
-      />
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight">Escritório Virtual</h1>
+        <p className="hidden text-xs text-muted-foreground md:block">Clique nos funcionários, nas salas e no Central Brain para ver detalhes.</p>
+      </div>
       <VirtualOffice initial={snapshot} />
     </>
   );

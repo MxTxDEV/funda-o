@@ -1,6 +1,6 @@
 "use client";
 import { DEPARTMENT_ZONES } from "@vc/core/client";
-import { Crosshair, Gauge, Home, RotateCcw, RotateCw, ScanSearch, ZoomIn, ZoomOut } from "lucide-react";
+import { Crosshair, Gauge, Home, Orbit, RotateCcw, RotateCw, ScanSearch, ZoomIn, ZoomOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FIXED_ROOM_LABELS, type FixedRoomKey } from "./layout";
 import { type CameraCommand, useOfficeStore } from "./store";
@@ -29,6 +29,8 @@ export function OfficeControls({ snapshot }: { snapshot: OfficeSnapshot }) {
   const send = useOfficeStore((s) => s.sendCommand);
   const autoFrame = useOfficeStore((s) => s.autoFrame);
   const setAutoFrame = useOfficeStore((s) => s.setAutoFrame);
+  const panorama = useOfficeStore((s) => s.panorama);
+  const setPanorama = useOfficeStore((s) => s.setPanorama);
   const quality = useOfficeStore((s) => s.quality);
   const setQuality = useOfficeStore((s) => s.setQuality);
   const select = useOfficeStore((s) => s.select);
@@ -63,7 +65,7 @@ export function OfficeControls({ snapshot }: { snapshot: OfficeSnapshot }) {
           })}
         </optgroup>
         <optgroup label="Áreas comuns">
-          {(Object.keys(FIXED_ROOM_LABELS) as FixedRoomKey[]).map((k) => (
+          {(Object.keys(FIXED_ROOM_LABELS) as FixedRoomKey[]).filter((k) => k !== "executive").map((k) => (
             <option key={k} value={`room:${k}`}>
               {FIXED_ROOM_LABELS[k]}
             </option>
@@ -77,6 +79,9 @@ export function OfficeControls({ snapshot }: { snapshot: OfficeSnapshot }) {
         <IconButton label="Girar à direita" onClick={cmd("rotate-right")}><RotateCw /></IconButton>
         <IconButton label="Centralizar câmera" onClick={cmd("center")}><Crosshair /></IconButton>
         <IconButton label="Visão inicial" onClick={cmd("reset")}><Home /></IconButton>
+        <IconButton label={panorama ? "Visão panorâmica: ligada" : "Visão panorâmica"} active={panorama} onClick={() => { if (!panorama) send("reset"); setPanorama(!panorama); }}>
+          <Orbit />
+        </IconButton>
         <IconButton label={autoFrame ? "Enquadramento automático: ligado" : "Enquadramento automático: desligado"} active={autoFrame} onClick={() => setAutoFrame(!autoFrame)}>
           <ScanSearch />
         </IconButton>

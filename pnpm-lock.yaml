@@ -38,6 +38,9 @@ importers:
       '@react-three/fiber':
         specifier: 9.8.2
         version: 9.8.2(@types/react@19.2.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1)
+      '@react-three/postprocessing':
+        specifier: 3.2.1
+        version: 3.2.1(@react-three/fiber@9.8.2(@types/react@19.2.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.1))(react@19.3.1)(three@0.186.1)
       '@vc/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -68,6 +71,9 @@ importers:
       next-auth:
         specifier: 5.0.0-beta.32
         version: 5.0.0-beta.32(next@16.4.3(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
+      postprocessing:
+        specifier: 6.39.5
+        version: 6.39.5(three@0.186.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -1357,6 +1363,14 @@ packages:
       react-native:
         optional: true
 
+  '@react-three/postprocessing@3.2.1':
+    resolution: {integrity: sha512-uzdSXlFKSikP3VvYJ4mp8+6fx/TfT28LafRdAzzmEb0Sl0wezr4Mc1zXrnIG5b0vMYdqOHAvzTHb07AyPgpdcg==}
+    peerDependencies:
+      '@react-three/fiber': '>=9.7.0'
+      postprocessing: ^6.36.0
+      react: ^19.0.0
+      three: '>= 0.156.0'
+
   '@rollup/rollup-android-arm-eabi@4.67.5':
     resolution: {integrity: sha512-FdWPeulkH+FH+rBzyKBD59tuVN4tRKvmVilSJm0OcnoYsQTpd9UhD78OaPcsYqo2fX6hCwAG0YIjrDLoQ3pR3g==}
     cpu: [arm]
@@ -2170,6 +2184,12 @@ packages:
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
 
+  n8ao@2.0.1:
+    resolution: {integrity: sha512-MoP1QKUdj4/3cKEnhFl917t0eQwWGER1l43ckz5mNOPyYWGRDGQbVoTOQz/VBvy01in6QVNG+AL6Xxx5AjZBYA==}
+    peerDependencies:
+      postprocessing: '>=6.30.0'
+      three: '>=0.137'
+
   nanoid@3.3.20:
     resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -2290,6 +2310,11 @@ packages:
   postgres@3.4.9:
     resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
+
+  postprocessing@6.39.5:
+    resolution: {integrity: sha512-YmH+t74J2X1lwYjKzK/tgs9C9kqWWPB9JwZiDF5mEf4BdCEAmEFbO8lXBA7NM0/j4g+x6FgD/Tt5/kT7ogbEDA==}
+    peerDependencies:
+      three: '>= 0.168.0 < 0.187.0'
 
   potpack@1.0.2:
     resolution: {integrity: sha512-choctRBIV9EMT9WGAZHn3V7t0Z2pMQyl0EZE6pFc/6ml3ssw7Dlf/oAOvFwjm1HVsqfQN8GfeFyJ+d8tRzqueQ==}
@@ -3547,6 +3572,17 @@ snapshots:
       - '@types/react'
       - immer
 
+  '@react-three/postprocessing@3.2.1(@react-three/fiber@9.8.2(@types/react@19.2.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.1))(react@19.3.1)(three@0.186.1)':
+    dependencies:
+      '@react-three/fiber': 9.8.2(@types/react@19.2.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1)
+      maath: 0.10.8(@types/three@0.186.0)(three@0.186.1)
+      n8ao: 2.0.1(postprocessing@6.39.5(three@0.186.1))(three@0.186.1)
+      postprocessing: 6.39.5(three@0.186.1)
+      react: 19.3.1
+      three: 0.186.1
+    transitivePeerDependencies:
+      - '@types/three'
+
   '@rollup/rollup-android-arm-eabi@4.67.5':
     optional: true
 
@@ -4212,6 +4248,11 @@ snapshots:
       object-assign: 4.1.1
       thenify-all: 1.6.0
 
+  n8ao@2.0.1(postprocessing@6.39.5(three@0.186.1))(three@0.186.1):
+    dependencies:
+      postprocessing: 6.39.5(three@0.186.1)
+      three: 0.186.1
+
   nanoid@3.3.20: {}
 
   next-auth@5.0.0-beta.32(next@16.4.3(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1):
@@ -4302,6 +4343,10 @@ snapshots:
       source-map-js: 1.2.2
 
   postgres@3.4.9: {}
+
+  postprocessing@6.39.5(three@0.186.1):
+    dependencies:
+      three: 0.186.1
 
   potpack@1.0.2: {}
 

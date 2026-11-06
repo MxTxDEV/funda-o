@@ -1,5 +1,5 @@
 "use client";
-import { getTool, OFFICE_STATUS_COLORS, OFFICE_STATUS_LABELS, TASK_EVENT_LABELS } from "@vc/core/client";
+import { AI_CONNECTION_LABELS, getDepartmentZone, getTool, HIERARCHY_LABELS, OFFICE_STATUS_COLORS, OFFICE_STATUS_LABELS, TASK_EVENT_LABELS } from "@vc/core/client";
 import { ExternalLink, ListPlus, MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { openDirectConversationAction } from "@/app/(app)/actions/office";
@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/forms";
 import { DemoBadge, TaskStatusBadge } from "@/components/status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRelative } from "@/lib/utils";
+import { formatDateTime, formatRelative } from "@/lib/utils";
 import type { OfficeAgent, OfficeDepartment, OfficeSnapshot } from "../types";
 import { FutureNote, PanelShell, Section } from "./PanelShell";
 
@@ -27,7 +27,7 @@ export function EmployeeDetailsPanel({
   return (
     <PanelShell eyebrow="Funcionário" title={agent.name} onClose={onClose}>
       <div className="flex items-center gap-3">
-        <AgentAvatar seed={agent.avatarSeed} url={agent.avatarUrl} name={agent.name} size={56} />
+        <AgentAvatar seed={agent.avatarSeed} url={agent.avatarUrl} appearance={agent.appearance} name={agent.name} size={56} />
         <div className="min-w-0">
           <p className="truncate font-medium">{agent.title}</p>
           <p className="truncate text-xs" style={{ color: department?.color }}>
@@ -41,9 +41,40 @@ export function EmployeeDetailsPanel({
         {agent.isDemo && <DemoBadge className="ml-auto" />}
       </div>
 
-      <Section title="Especialidade">
-        <p>{agent.specialty}</p>
-        {agent.description && <p className="mt-1 text-xs text-muted-foreground">{agent.description}</p>}
+      <Section title="Hierarquia">
+        <p>{HIERARCHY_LABELS[agent.hierarchyLevel]}</p>
+        <p className="text-xs text-muted-foreground">Reporta a: {agent.reportsTo?.name ?? "Proprietário"}</p>
+      </Section>
+
+      <Section title="Especialidades">
+        <div className="flex flex-wrap gap-1.5">
+          {(agent.specialties.length ? agent.specialties : [agent.specialty]).map((s) => (
+            <Badge key={s}>{s}</Badge>
+          ))}
+        </div>
+        {agent.personality && <p className="mt-1.5 text-xs text-muted-foreground">Perfil: {agent.personality}</p>}
+      </Section>
+
+      {agent.responsibilities.length > 0 && (
+        <Section title="Responsabilidades">
+          <ul className="list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
+            {agent.responsibilities.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <Section title="Estação e IA">
+        <p className="text-xs">
+          {agent.officeStatus === "resting"
+            ? "Sala de Lazer (pausado)"
+            : department?.zone
+              ? `${getDepartmentZone(department.zone)?.label} · mesa ${agent.deskIndex + 1}`
+              : "Sem sala no escritório"}
+        </p>
+        <p className="text-xs text-warning">{AI_CONNECTION_LABELS[agent.aiConnection]}</p>
+        <p className="text-[11px] text-muted-foreground">Cadastrado em {formatDateTime(agent.createdAt)}</p>
       </Section>
 
       <Section title="Tarefa atual">

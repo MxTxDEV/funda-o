@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { OfficeFloor } from "@/components/office-floor";
-import { Button } from "@/components/ui/button";
 import { OfficeControls } from "./OfficeControls";
 import { OfficeStatusBar } from "./OfficeStatusBar";
 import { OfficeTopBar } from "./OfficeTopBar";
@@ -73,94 +72,82 @@ export function VirtualOffice({ initial }: { initial: OfficeSnapshot }) {
   const unplaced = snapshot.departments.filter((d) => snapshot.unplacedDepartmentIds.includes(d.id));
 
   return (
-    <div className="space-y-3">
-      <OfficeTopBar metrics={snapshot.metrics} />
-      <div className="relative flex h-[calc(100dvh-255px)] min-h-[560px] flex-col overflow-hidden rounded-lg border border-border bg-[#07090d]">
-        <div className="relative flex-1" data-testid="office-viewport">
-          {webgl === null ? (
-            <CanvasLoading />
-          ) : webgl ? (
-            <VirtualOfficeCanvas snapshot={snapshot} />
-          ) : (
-            <div className="h-full overflow-y-auto p-4">
-              <div className="mb-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-                <MonitorX className="size-4" /> Seu navegador não suporta WebGL. Exibindo a planta 2D do escritório.
-              </div>
-              {snapshot.agents.length > 0 && (
-                <OfficeFloor
-                  agents={snapshot.agents.map((a) => {
-                    const d = snapshot.departments.find((x) => x.id === a.departmentId)!;
-                    return {
-                      id: a.id,
-                      name: a.name,
-                      title: a.title,
-                      avatarSeed: a.avatarSeed,
-                      avatarUrl: a.avatarUrl,
-                      isDemo: a.isDemo,
-                      department: { id: d.id, name: d.name, color: d.color, isActive: d.isActive },
-                      presence: { state: a.presence, statusMessage: a.statusMessage },
-                    };
-                  })}
-                />
-              )}
+    <div className="relative flex h-[calc(100dvh-150px)] min-h-[560px] flex-col overflow-hidden rounded-lg border border-border bg-[#07090d]">
+      <div className="relative flex-1" data-testid="office-viewport">
+        {webgl === null ? (
+          <CanvasLoading />
+        ) : webgl ? (
+          <VirtualOfficeCanvas snapshot={snapshot} />
+        ) : (
+          <div className="h-full overflow-y-auto p-4 pt-14">
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+              <MonitorX className="size-4" /> Seu navegador não suporta WebGL. Exibindo a planta 2D do escritório.
             </div>
-          )}
-
-          {webgl && (
-            <div className="pointer-events-none absolute bottom-3 left-3 z-30">
-              <OfficeControls snapshot={snapshot} />
-            </div>
-          )}
-
-          <div className="pointer-events-none absolute left-3 top-3 z-30 flex max-w-[60%] flex-col gap-2">
-            {error && <div className="pointer-events-auto rounded-md border border-danger/40 bg-danger/10 px-3 py-1.5 text-xs text-[#ff9b9b]">{error}</div>}
-            {unplaced.length > 0 && (
-              <details className="pointer-events-auto rounded-md border border-warning/30 bg-[#0b0f16]/90 px-3 py-1.5 text-xs text-warning">
-                <summary className="cursor-pointer select-none">
-                  {unplaced.length} departamento(s) sem sala no escritório (5 salas disponíveis)
-                </summary>
-                <ul className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto">
-                  {unplaced.map((d) => (
-                    <li key={d.id}>
-                      <button type="button" className="underline-offset-2 hover:underline" onClick={() => select({ kind: "department", id: d.id })}>
-                        {d.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+            {snapshot.agents.length > 0 && (
+              <OfficeFloor
+                agents={snapshot.agents.map((a) => {
+                  const d = snapshot.departments.find((x) => x.id === a.departmentId)!;
+                  return {
+                    id: a.id,
+                    name: a.name,
+                    title: a.title,
+                    avatarSeed: a.avatarSeed,
+                    avatarUrl: a.avatarUrl,
+                    isDemo: a.isDemo,
+                    department: { id: d.id, name: d.name, color: d.color, isActive: d.isActive },
+                    presence: { state: a.presence, statusMessage: a.statusMessage },
+                  };
+                })}
+              />
             )}
           </div>
+        )}
 
-          {empty && !panel && (
-            <div className="pointer-events-none absolute inset-x-0 top-14 z-30 flex justify-center px-4">
-              <div className="pointer-events-auto max-w-md rounded-lg border border-border-strong bg-[#0b0f16]/92 p-5 text-center shadow-2xl backdrop-blur" data-testid="office-empty">
-                <Building2 className="mx-auto mb-2 size-7 text-primary" />
-                <p className="font-medium">O escritório está vazio</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Nenhum funcionário cadastrado ainda. Crie departamentos e cadastre funcionários: eles aparecerão nas estações de trabalho da
-                  sala do seu departamento.
-                </p>
-                <div className="mt-4 flex justify-center gap-2">
-                  <Button asChild size="sm" variant="secondary">
-                    <Link href="/departments">
-                      <Building2 /> Departamentos
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href="/agents/new">
-                      <UserPlus /> Cadastrar funcionário
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+        {/* indicators overlay */}
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-30 flex flex-col gap-2">
+          <OfficeTopBar metrics={snapshot.metrics} />
+          {error && <div className="pointer-events-auto w-fit rounded-md border border-danger/40 bg-danger/10 px-3 py-1.5 text-xs text-[#ff9b9b]">{error}</div>}
+          {unplaced.length > 0 && (
+            <details className="pointer-events-auto w-fit max-w-md rounded-md border border-warning/30 bg-[#0b0f16]/90 px-3 py-1.5 text-xs text-warning">
+              <summary className="cursor-pointer select-none">{unplaced.length} departamento(s) sem sala no escritório</summary>
+              <ul className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto">
+                {unplaced.map((d) => (
+                  <li key={d.id}>
+                    <button type="button" className="underline-offset-2 hover:underline" onClick={() => select({ kind: "department", id: d.id })}>
+                      {d.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {empty && (
+            <div
+              className="pointer-events-auto flex w-fit flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-[#0b0f16]/90 px-3 py-2 text-xs shadow-lg backdrop-blur"
+              data-testid="office-empty"
+              role="status"
+            >
+              <Building2 className="size-4 text-primary" />
+              <span className="text-slate-300">Nenhum funcionário cadastrado ainda.</span>
+              <Link href="/departments" className="rounded border border-border px-2 py-0.5 hover:border-primary/60">
+                Departamentos
+              </Link>
+              <Link href="/agents" className="inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-white hover:bg-primary-hover">
+                <UserPlus className="size-3.5" /> Cadastrar funcionários
+              </Link>
             </div>
           )}
-
-          {panel}
         </div>
-        <OfficeStatusBar agents={snapshot.agents} />
+
+        {webgl && (
+          <div className="pointer-events-none absolute bottom-3 left-3 z-30">
+            <OfficeControls snapshot={snapshot} />
+          </div>
+        )}
+
+        {panel}
       </div>
+      <OfficeStatusBar agents={snapshot.agents} />
     </div>
   );
 }
